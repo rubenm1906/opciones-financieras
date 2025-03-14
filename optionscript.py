@@ -1,9 +1,10 @@
 import requests
 import json
 from datetime import datetime
+import os  # Importamos os para manejar variables de entorno
 
-# Configuración
-API_KEY = "TU_CLAVE_API_AQUI"  # Reemplaza con tu clave de Alpha Vantage
+# Configuración (la clave ahora se toma de la variable de entorno)
+API_KEY = os.getenv("API_KEY")  # Obtiene la clave desde el entorno, debe estar definida como secreto en GitHub Actions
 TICKER = "AAPL"  # Ejemplo con Apple, cámbialo según necesites
 MIN_RENTABILIDAD_ANUAL = 40  # Umbral ajustable de rentabilidad anual (%)
 
@@ -39,6 +40,10 @@ def calcular_rentabilidad(precio_put, precio_subyacente, dias_vencimiento):
 def analizar_opciones(ticker):
     """Analiza las opciones PUT y filtra las que superan la rentabilidad deseada."""
     try:
+        # Verificar que la clave API esté disponible
+        if not API_KEY:
+            raise Exception("La clave API no está definida. Configura la variable de entorno API_KEY.")
+
         # Obtener precio del subyacente
         precio_subyacente = obtener_precio_subyacente(ticker)
         print(f"Precio del subyacente ({ticker}): ${precio_subyacente:.2f}")
