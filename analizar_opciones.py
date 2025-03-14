@@ -4,12 +4,15 @@ import os
 from tabulate import tabulate
 
 # Configuración
-TICKERS = ["AAPL", "MSFT", "GOOGL","EPAM","GLNG"]  # Lista de tickers a analizar
+TICKERS = list(set(["AAPL", "MSFT", "GOOGL"]))  # Aseguramos que no haya duplicados
 MIN_RENTABILIDAD_ANUAL = 40
 MAX_DIAS_VENCIMIENTO = 90  # Filtro máximo de 90 días
 MIN_DIFERENCIA_PORCENTUAL = 5  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
-MIN_VOLUMEN = 100  # Filtro mínimo de volumen
+MIN_VOLUMEN = 50  # Reducimos el volumen mínimo para permitir más opciones
 TOP_CONTRATOS = 5  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
+
+# Variable para evitar ejecuciones múltiples
+SCRIPT_EJECUTADO = False
 
 def obtener_datos_subyacente(ticker):
     """Obtiene el precio del subyacente, mínimo y máximo de 52 semanas."""
@@ -54,10 +57,17 @@ def calcular_diferencia_porcentual(precio_subyacente, break_even):
     return ((precio_subyacente - break_even) / precio_subyacente) * 100
 
 def analizar_opciones(tickers):
+    global SCRIPT_EJECUTADO
+    if SCRIPT_EJECUTADO:
+        print("El script ya ha sido ejecutado. Evitando repetición.")
+        return
+    SCRIPT_EJECUTADO = True
+
     resultado = ""
     todas_las_opciones = []  # Lista para almacenar todas las opciones filtradas de todos los tickers
 
     try:
+        print(f"Analizando {len(tickers)} tickers: {tickers}")
         for ticker in tickers:
             # Separador para cada ticker
             resultado += f"\n{'='*50}\nAnalizando ticker: {ticker}\n{'='*50}\n"
@@ -75,6 +85,7 @@ def analizar_opciones(tickers):
 
                 # Obtener opciones PUT
                 opciones_put = obtener_opciones_put(stock)
+                print(f"Se encontraron {len(opciones_put)} opciones PUT para {ticker}")
                 opciones_filtradas = []
                 for contrato in opciones_put:
                     strike = float(contrato["strike"])
@@ -114,6 +125,7 @@ def analizar_opciones(tickers):
 
                 if opciones_filtradas:
                     resultado += f"\nOpciones PUT con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}):\n"
+                    print(f"Se encontraron {len(opciones_filtradas)} opciones que cumplen los filtros para {ticker}")
                     
                     # Crear una tabla con los datos para este ticker
                     tabla_datos = []
@@ -149,7 +161,7 @@ def analizar_opciones(tickers):
                     print(tabla)
                 else:
                     resultado += f"\nNo se encontraron opciones PUT con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% dentro de {MAX_DIAS_VENCIMIENTO} días y volumen > {MIN_VOLUMEN}.\n"
-                    print(resultado)
+                    print(f"No se encontraron opciones que cumplan los filtros para {ticker}")
 
             except Exception as e:
                 error_msg = f"Error al analizar {ticker}: {e}\n"
@@ -158,6 +170,7 @@ def analizar_opciones(tickers):
                 continue
 
         # Tabla adicional: Mejores contratos
+        print(f"Total de opciones filtradas (todos los tickers): {len(todas_las_opciones)}")
         if todas_las_opciones:
             # Ordenar por mayor rentabilidad anual, menor tiempo de vencimiento, y mayor diferencia porcentual
             mejores_opciones = sorted(
@@ -201,6 +214,9 @@ def analizar_opciones(tickers):
             tabla = tabulate(tabla_mejores, headers=headers_mejores, tablefmt="grid")
             resultado += f"\n{tabla}\n"
             print(tabla)
+        else:
+            resultado += f"\nNo se encontraron opciones que cumplan los filtros en ningún ticker.\n"
+            print("No se encontraron opciones que cumplan los filtros en ningún ticker.")
 
         # Guardar resultados en un archivo
         with open("resultados.txt", "w") as f:
