@@ -6,7 +6,7 @@ import os
 # Configuración
 API_KEY = os.getenv("API_KEY")
 TICKER = "AAPL"
-MIN_RENTABILIDAD_ANUAL = 40
+MIN_RENTABILIDAD_ANUAL = 10
 
 def obtener_precio_subyacente(ticker):
     url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&apikey={API_KEY}"
