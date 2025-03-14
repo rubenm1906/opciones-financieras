@@ -5,7 +5,7 @@ from tabulate import tabulate
 
 # Configuración
 TICKERS = ["AAPL", "MSFT", "GOOGL"]  # Lista de tickers a analizar
-MIN_RENTABILIDAD_ANUAL = 40
+MIN_RENTABILIDAD_ANUAL = 20
 MAX_DIAS_VENCIMIENTO = 90  # Filtro máximo de 90 días
 MIN_DIFERENCIA_PORCENTUAL = 5  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
 TOP_CONTRATOS = 5  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
