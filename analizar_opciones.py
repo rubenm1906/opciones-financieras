@@ -6,7 +6,7 @@ from tabulate import tabulate
 # Configuración
 TICKERS = list(set(["AAPL", "NVDA","EPAM","GLNG"]))  # Aseguramos que no haya duplicados
 MIN_RENTABILIDAD_ANUAL = 30
-MAX_DIAS_VENCIMIENTO = 90  # Filtro máximo de 90 días
+MAX_DIAS_VENCIMIENTO = 60  # Filtro máximo de 90 días
 MIN_DIFERENCIA_PORCENTUAL = 5  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
 MIN_VOLUMEN = 50  # Reducimos el volumen mínimo para permitir más opciones
 TOP_CONTRATOS = 5  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
