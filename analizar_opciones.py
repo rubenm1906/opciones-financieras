@@ -5,8 +5,8 @@ import os
 
 # Configuración
 API_KEY = os.getenv("API_KEY")
-TICKER = "AAPL"
-MIN_RENTABILIDAD_ANUAL = 8
+TICKER = "AAPL"  # Puedes cambiar a "MSFT" o "GOOGL" para probar
+MIN_RENTABILIDAD_ANUAL = 40
 
 def obtener_precio_subyacente(ticker):
     url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&apikey={API_KEY}"
@@ -17,16 +17,17 @@ def obtener_precio_subyacente(ticker):
         precio = float(datos["Time Series (Daily)"][latest_date]["4. close"])
         return precio
     else:
-        raise Exception("No se pudo obtener el precio del subyacente.")
+        raise Exception(f"No se pudo obtener el precio del subyacente. Respuesta: {datos}")
 
 def obtener_opciones_put(ticker):
     url = f"https://www.alphavantage.co/query?function=OPTION_PRICES&symbol={ticker}&apikey={API_KEY}"
     respuesta = requests.get(url)
     datos = respuesta.json()
+    print(f"Respuesta de OPTION_PRICES para {ticker}: {datos}")  # Añadimos esto para depurar
     if "putOptionContracts" in datos:
         return datos["putOptionContracts"]
     else:
-        raise Exception("No se encontraron datos de opciones PUT.")
+        raise Exception(f"No se encontraron datos de opciones PUT. Respuesta: {datos}")
 
 def calcular_rentabilidad(precio_put, precio_subyacente, dias_vencimiento):
     rentabilidad_diaria = (precio_put * 100) / precio_subyacente
