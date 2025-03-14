@@ -1,33 +1,32 @@
-import requests
-import json
+import yfinance as yf
 from datetime import datetime
 import os
 
 # Configuración
-API_KEY = os.getenv("API_KEY")
-TICKER = "AAPL"  # Puedes cambiar a "MSFT" o "GOOGL" para probar
+TICKER = "AAPL"
 MIN_RENTABILIDAD_ANUAL = 40
 
 def obtener_precio_subyacente(ticker):
-    url = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&apikey={API_KEY}"
-    respuesta = requests.get(url)
-    datos = respuesta.json()
-    if "Time Series (Daily)" in datos:
-        latest_date = list(datos["Time Series (Daily)"].keys())[0]
-        precio = float(datos["Time Series (Daily)"][latest_date]["4. close"])
-        return precio
-    else:
-        raise Exception(f"No se pudo obtener el precio del subyacente. Respuesta: {datos}")
+    stock = yf.Ticker(ticker)
+    precio = stock.info['regularMarketPrice']
+    return precio
 
 def obtener_opciones_put(ticker):
-    url = f"https://www.alphavantage.co/query?function=OPTION_PRICES&symbol={ticker}&apikey={API_KEY}"
-    respuesta = requests.get(url)
-    datos = respuesta.json()
-    print(f"Respuesta de OPTION_PRICES para {ticker}: {datos}")  # Añadimos esto para depurar
-    if "putOptionContracts" in datos:
-        return datos["putOptionContracts"]
-    else:
-        raise Exception(f"No se encontraron datos de opciones PUT. Respuesta: {datos}")
+    stock = yf.Ticker(ticker)
+    # Obtener fechas de vencimiento disponibles
+    fechas_vencimiento = stock.options
+    opciones_put = []
+    for fecha in fechas_vencimiento:
+        # Obtener datos de opciones para esa fecha
+        opcion = stock.option_chain(fecha)
+        puts = opcion.puts
+        for _, put in puts.iterrows():
+            opciones_put.append({
+                "strike": put["strike"],
+                "lastPrice": put["lastPrice"],
+                "expirationDate": fecha
+            })
+    return opciones_put
 
 def calcular_rentabilidad(precio_put, precio_subyacente, dias_vencimiento):
     rentabilidad_diaria = (precio_put * 100) / precio_subyacente
@@ -37,9 +36,6 @@ def calcular_rentabilidad(precio_put, precio_subyacente, dias_vencimiento):
 
 def analizar_opciones(ticker):
     try:
-        if not API_KEY:
-            raise Exception("La clave API no está definida. Configura la variable de entorno API_KEY.")
-
         precio_subyacente = obtener_precio_subyacente(ticker)
         print(f"Precio del subyacente ({ticker}): ${precio_subyacente:.2f}")
 
