@@ -4,7 +4,7 @@ import os
 
 # Configuración
 TICKER = "AAPL"
-MIN_RENTABILIDAD_ANUAL = 40
+MIN_RENTABILIDAD_ANUAL = 60
 
 def obtener_precio_subyacente(ticker):
     stock = yf.Ticker(ticker)
