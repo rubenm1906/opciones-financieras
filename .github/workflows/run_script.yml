@@ -21,7 +21,7 @@ jobs:
       - name: Run script
         run: python analizar_opciones.py
       - name: Upload results
-        uses: actions/upload-artifact@v4  # Actualizamos a v4
+        uses: actions/upload-artifact@v4
         with:
           name: resultados
           path: resultados.txt
