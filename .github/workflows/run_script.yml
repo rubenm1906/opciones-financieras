@@ -45,14 +45,6 @@ on:
         description: 'Número de contratos a mostrar en "Mejores Contratos"'
         required: false
         default: '5'
-      alerta_rentabilidad_anual:
-        description: 'Rentabilidad anual mínima para alertas (%)'
-        required: false
-        default: '50'
-      alerta_max_volatilidad:
-        description: 'Volatilidad implícita máxima para alertas (%)'
-        required: false
-        default: '30'
 
 jobs:
   analizar-opciones:
@@ -88,8 +80,8 @@ jobs:
           MIN_OPEN_INTEREST: ${{ github.event.inputs.min_open_interest }}
           FILTRO_TIPO_OPCION: ${{ github.event.inputs.filtro_tipo_opcion }}
           TOP_CONTRATOS: ${{ github.event.inputs.top_contratos }}
-          ALERTA_RENTABILIDAD_ANUAL: ${{ github.event.inputs.alerta_rentabilidad_anual }}
-          ALERTA_MAX_VOLATILIDAD: ${{ github.event.inputs.alerta_max_volatilidad }}
+          ALERTA_RENTABILIDAD_ANUAL: 50  # Valor por defecto hardcodeado
+          ALERTA_MAX_VOLATILIDAD: 30     # Valor por defecto hardcodeado
         run: |
           python analizar_opciones.py
 
