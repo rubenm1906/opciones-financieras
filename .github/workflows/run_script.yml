@@ -16,7 +16,7 @@ on:
       max_dias_vencimiento:
         description: 'Máximo días al vencimiento'
         required: false
-        default: '90'
+        default: '60'
       min_diferencia_porcentual:
         description: 'Mínima diferencia porcentual (%)'
         required: false
@@ -24,11 +24,11 @@ on:
       min_volumen:
         description: 'Mínimo volumen'
         required: false
-        default: '50'
+        default: '1'
       min_volatilidad_implicita:
         description: 'Mínima volatilidad implícita (%)'
         required: false
-        default: '20'
+        default: '30'
       max_volatilidad_implicita:
         description: 'Máxima volatilidad implícita (%)'
         required: false
@@ -36,7 +36,7 @@ on:
       min_open_interest:
         description: 'Mínimo interés abierto'
         required: false
-        default: '100'
+        default: '1'
       filtro_tipo_opcion:
         description: 'Filtro tipo opción (OTM, ITM, TODAS)'
         required: false
@@ -44,7 +44,7 @@ on:
       top_contratos:
         description: 'Número de contratos a mostrar en "Mejores Contratos"'
         required: false
-        default: '5'
+        default: '10'
 
 jobs:
   analizar-opciones:
