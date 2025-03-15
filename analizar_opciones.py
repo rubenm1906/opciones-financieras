@@ -138,4 +138,235 @@ def analizar_opciones(tickers):
                 opciones_filtradas = []
                 for contrato in opciones_put:
                     strike = float(contrato["strike"])
-                    precio_put = float
+                    precio_put = float(contrato["lastPrice"])
+                    vencimiento_str = contrato["expirationDate"]
+                    dias_vencimiento = (datetime.strptime(vencimiento_str, "%Y-%m-%d") - datetime.now()).days
+                    volumen = contrato["volume"]
+                    volatilidad_implícita = contrato["impliedVolatility"] * 100  # Convertir a %
+                    open_interest = contrato["openInterest"]
+
+                    # Filtro OTM/ITM
+                    if FILTRO_TIPO_OPCION == "OTM":
+                        if strike >= precio_subyacente:  # Descarta ITM y ATM
+                            continue
+                    elif FILTRO_TIPO_OPCION == "ITM":
+                        if strike < precio_subyacente:  # Descarta OTM (ATM se considera ITM)
+                            continue
+
+                    # Otros filtros
+                    if dias_vencimiento <= 0 or dias_vencimiento > MAX_DIAS_VENCIMIENTO:
+                        continue
+                    if volumen < MIN_VOLUMEN:
+                        continue
+                    if volatilidad_implícita < MIN_VOLATILIDAD_IMPLÍCITA or volatilidad_implícita > MAX_VOLATILIDAD_IMPLÍCITA:
+                        continue
+                    if open_interest < MIN_OPEN_INTEREST:
+                        continue
+
+                    rent_diaria, rent_anual = calcular_rentabilidad(precio_put, precio_subyacente, dias_vencimiento)
+                    break_even = calcular_break_even(strike, precio_put)
+                    diferencia_porcentual = calcular_diferencia_porcentual(precio_subyacente, break_even)
+
+                    # Filtrar por rentabilidad anual mínima y diferencia porcentual mínima
+                    if rent_anual >= MIN_RENTABILIDAD_ANUAL and diferencia_porcentual >= MIN_DIFERENCIA_PORCENTUAL:
+                        opcion = {
+                            "ticker": ticker,
+                            "strike": strike,
+                            "precio_put": precio_put,
+                            "vencimiento": vencimiento_str,
+                            "dias_vencimiento": dias_vencimiento,
+                            "rentabilidad_diaria": rent_diaria,
+                            "rentabilidad_anual": rent_anual,
+                            "break_even": break_even,
+                            "diferencia_porcentual": diferencia_porcentual,
+                            "volatilidad_implícita": volatilidad_implícita,
+                            "volumen": volumen,
+                            "open_interest": open_interest
+                        }
+                        opciones_filtradas.append(opcion)
+                        todas_las_opciones.append(opcion)
+
+                        # Preparar datos para CSV
+                        todas_las_opciones_df.append([
+                            ticker,
+                            f"${strike:.2f}",
+                            f"${precio_put:.2f}",
+                            vencimiento_str,
+                            dias_vencimiento,
+                            f"{rent_diaria:.2f}%",
+                            f"{rent_anual:.2f}%",
+                            f"${break_even:.2f}",
+                            f"{diferencia_porcentual:.2f}%",
+                            f"{volatilidad_implícita:.2f}%",
+                            volumen,
+                            open_interest
+                        ])
+
+                if opciones_filtradas:
+                    tipo_opcion_texto = "Out of the Money" if FILTRO_TIPO_OPCION == "OTM" else "In the Money" if FILTRO_TIPO_OPCION == "ITM" else "Todas"
+                    resultado += f"\nOpciones PUT {tipo_opcion_texto} con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}, volatilidad entre {MIN_VOLATILIDAD_IMPLÍCITA}% y {MAX_VOLATILIDAD_IMPLÍCITA}%, interés abierto > {MIN_OPEN_INTEREST}):\n"
+                    print(f"Se encontraron {len(opciones_filtradas)} opciones que cumplen los filtros para {ticker}")
+                    
+                    # Crear tabla para mostrar en consola y guardar en resultado
+                    tabla_datos = []
+                    for opcion in opciones_filtradas:
+                        tabla_datos.append([
+                            f"${opcion['strike']:.2f}",
+                            f"${opcion['precio_put']:.2f}",
+                            opcion['vencimiento'],
+                            opcion['dias_vencimiento'],
+                            f"{opcion['rentabilidad_diaria']:.2f}%",
+                            f"{opcion['rentabilidad_anual']:.2f}%",
+                            f"${opcion['break_even']:.2f}",
+                            f"{opcion['diferencia_porcentual']:.2f}%",
+                            f"{opcion['volatilidad_implícita']:.2f}%",
+                            opcion['volumen'],
+                            opcion['open_interest']
+                        ])
+                    
+                    headers = [
+                        "Strike",
+                        "Precio PUT",
+                        "Vencimiento",
+                        "Días Venc.",
+                        "Rent. Diaria",
+                        "Rent. Anual",
+                        "Break-even",
+                        "Dif. % (Suby.-Break.)",
+                        "Volatilidad Implícita",
+                        "Volumen",
+                        "Interés Abierto"
+                    ]
+                    
+                    tabla = tabulate(tabla_datos, headers=headers, tablefmt="grid")
+                    resultado += f"\n{tabla}\n"
+                    print(tabla)
+
+                    # Verificar umbrales para alertas (Idea 7)
+                    for opcion in opciones_filtradas:
+                        if (opcion['rentabilidad_anual'] >= ALERTA_RENTABILIDAD_ANUAL and 
+                            opcion['volatilidad_implícita'] <= ALERTA_MAX_VOLATILIDAD):
+                            alerta_msg = f"¡Oportunidad destacada! {ticker}: Rentabilidad anual: {opcion['rentabilidad_anual']:.2f}%, Volatilidad: {opcion['volatilidad_implícita']:.2f}% (Strike: ${opcion['strike']:.2f}, Vencimiento: {opcion['vencimiento']})\n"
+                            resultado += alerta_msg
+                            print(alerta_msg)
+
+                else:
+                    resultado += "\nNo se consiguieron resultados para este ticker.\n"
+                    print("No se consiguieron resultados para este ticker.")
+
+            except Exception as e:
+                error_msg = f"Error al analizar {ticker}: {e}\n"
+                resultado += error_msg
+                print(error_msg)
+                continue
+
+        # Exportar todas las opciones a CSV (Idea 1)
+        if todas_las_opciones_df:
+            headers_csv = [
+                "Ticker",
+                "Strike",
+                "Precio PUT",
+                "Vencimiento",
+                "Días Venc.",
+                "Rent. Diaria",
+                "Rent. Anual",
+                "Break-even",
+                "Dif. % (Suby.-Break.)",
+                "Volatilidad Implícita",
+                "Volumen",
+                "Interés Abierto"
+            ]
+            df_todas = pd.DataFrame(todas_las_opciones_df, columns=headers_csv)
+            df_todas.to_csv("todas_las_opciones.csv", index=False)
+            print("Todas las opciones exportadas a 'todas_las_opciones.csv'.")
+
+        # Tabla adicional: Mejores contratos
+        print(f"Total de opciones filtradas (todos los tickers): {len(todas_las_opciones)}")
+        mejores_opciones_df = []  # Lista para exportar Mejores Contratos a CSV
+        if todas_las_opciones:
+            # Ordenar por mayor rentabilidad anual, menor tiempo de vencimiento, y mayor diferencia porcentual
+            mejores_opciones = sorted(
+                todas_las_opciones,
+                key=lambda x: (-x['rentabilidad_anual'], x['dias_vencimiento'], -x['diferencia_porcentual'])
+            )[:TOP_CONTRATOS]
+
+            tipo_opcion_texto = "Out of the Money" if FILTRO_TIPO_OPCION == "OTM" else "In the Money" if FILTRO_TIPO_OPCION == "ITM" else "Todas"
+            resultado += f"\n{'='*50}\nMejores {TOP_CONTRATOS} Contratos {tipo_opcion_texto} (Mayor Rentabilidad Anual, Menor Tiempo, Mayor Diferencia %):\n{'='*50}\n"
+            print(f"\n{'='*50}\nMejores {TOP_CONTRATOS} Contratos {tipo_opcion_texto} (Mayor Rentabilidad Anual, Menor Tiempo, Mayor Diferencia %):\n{'='*50}\n")
+
+            tabla_mejores = []
+            for opcion in mejores_opciones:
+                tabla_mejores.append([
+                    opcion['ticker'],
+                    f"${opcion['strike']:.2f}",
+                    f"${opcion['precio_put']:.2f}",
+                    opcion['vencimiento'],
+                    opcion['dias_vencimiento'],
+                    f"{opcion['rentabilidad_diaria']:.2f}%",
+                    f"{opcion['rentabilidad_anual']:.2f}%",
+                    f"${opcion['break_even']:.2f}",
+                    f"{opcion['diferencia_porcentual']:.2f}%",
+                    f"{opcion['volatilidad_implícita']:.2f}%",
+                    opcion['volumen'],
+                    opcion['open_interest']
+                ])
+
+                # Preparar datos para CSV
+                mejores_opciones_df.append([
+                    opcion['ticker'],
+                    f"${opcion['strike']:.2f}",
+                    f"${opcion['precio_put']:.2f}",
+                    opcion['vencimiento'],
+                    opcion['dias_vencimiento'],
+                    f"{opcion['rentabilidad_diaria']:.2f}%",
+                    f"{opcion['rentabilidad_anual']:.2f}%",
+                    f"${opcion['break_even']:.2f}",
+                    f"{opcion['diferencia_porcentual']:.2f}%",
+                    f"{opcion['volatilidad_implícita']:.2f}%",
+                    opcion['volumen'],
+                    opcion['open_interest']
+                ])
+
+            headers_mejores = [
+                "Ticker",
+                "Strike",
+                "Precio PUT",
+                "Vencimiento",
+                "Días Venc.",
+                "Rent. Diaria",
+                "Rent. Anual",
+                "Break-even",
+                "Dif. % (Suby.-Break.)",
+                "Volatilidad Implícita",
+                "Volumen",
+                "Interés Abierto"
+            ]
+
+            tabla = tabulate(tabla_mejores, headers=headers_mejores, tablefmt="grid")
+            resultado += f"\n{tabla}\n"
+            print(tabla)
+
+            # Exportar Mejores Contratos a CSV (Idea 1)
+            df_mejores = pd.DataFrame(mejores_opciones_df, columns=headers_mejores)
+            df_mejores.to_csv("mejores_contratos.csv", index=False)
+            print("Mejores contratos exportados a 'mejores_contratos.csv'.")
+
+            # Enviar notificación a Discord (Idea 2)
+            enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto)
+
+        else:
+            resultado += f"\nNo se encontraron opciones que cumplan los filtros en ningún ticker.\n"
+            print("No se encontraron opciones que cumplan los filtros en ningún ticker.")
+
+        # Guardar resultados en un archivo de texto
+        with open("resultados.txt", "w") as f:
+            f.write(resultado)
+
+    except Exception as e:
+        error_msg = f"Error general: {e}\n"
+        print(error_msg)
+        with open("resultados.txt", "w") as f:
+            f.write(error_msg)
+
+if __name__ == "__main__":
+    analizar_opciones(TICKERS)
