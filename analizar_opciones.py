@@ -6,27 +6,141 @@ import pandas as pd  # Para exportar a CSV
 import requests  # Para enviar notificaciones a Discord
 import time  # Para agregar retrasos entre solicitudes
 
-# Configuración
-TICKERS = list(set(["NA9.DE" ,"TEP.PA" ,"GOOGL" ,"EPAM" ,"NFE" ,"GLNG","GLOB" ,"NVDA" ]))  # Aseguramos que no haya duplicados
-MIN_RENTABILIDAD_ANUAL = 45
-MAX_DIAS_VENCIMIENTO = 45  # Filtro máximo de 90 días
-MIN_DIFERENCIA_PORCENTUAL = 5  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
-MIN_VOLUMEN = 1  # Filtro mínimo de volumen
-MIN_VOLATILIDAD_IMPLÍCITA = 20  # Mínimo de volatilidad implícita en %
-MAX_VOLATILIDAD_IMPLÍCITA = 50  # Máximo de volatilidad implícita en %
-MIN_OPEN_INTEREST = 1  # Mínimo de interés abierto
-FILTRO_TIPO_OPCION = "OTM"  # Opciones: "OTM", "ITM", "TODAS"
-TOP_CONTRATOS = 10  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
-
-# Nuevos umbrales para alertas personalizadas (Idea 7)
-ALERTA_RENTABILIDAD_ANUAL = 50  # Rentabilidad anual mínima para alerta
-ALERTA_MAX_VOLATILIDAD = 30  # Volatilidad implícita máxima para alerta
-
 # Configuración para Discord (Idea 2)
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1350463523196768356/ePmWnO2XWnfD582oMAr2WzqSFs7ZxU1ApRYi1bz8PiSbZE5zAcR7ZoOD8SPVofxA9UUW"
 
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
+
+def obtener_configuracion():
+    """Solicita la configuración al usuario a través de la consola."""
+    print("=== Configuración del Script de Análisis de Opciones ===")
+    
+    # TICKERS
+    tickers_input = input("Ingrese los tickers a analizar (separados por comas, ej: AAPL,MSFT,GOOGL): ")
+    TICKERS = list(set(tickers_input.replace(" ", "").split(",")))  # Eliminar espacios y duplicados
+    
+    # MIN_RENTABILIDAD_ANUAL
+    while True:
+        try:
+            MIN_RENTABILIDAD_ANUAL = float(input("Mínima rentabilidad anual (%): "))
+            if MIN_RENTABILIDAD_ANUAL < 0:
+                print("Por favor, ingrese un valor no negativo.")
+                continue
+            break
+        except ValueError:
+            print("Por favor, ingrese un número válido.")
+    
+    # MAX_DIAS_VENCIMIENTO
+    while True:
+        try:
+            MAX_DIAS_VENCIMIENTO = int(input("Máximo días al vencimiento: "))
+            if MAX_DIAS_VENCIMIENTO <= 0:
+                print("Por favor, ingrese un valor mayor a 0.")
+                continue
+            break
+        except ValueError:
+            print("Por favor, ingrese un número entero válido.")
+    
+    # MIN_DIFERENCIA_PORCENTUAL
+    while True:
+        try:
+            MIN_DIFERENCIA_PORCENTUAL = float(input("Mínima diferencia porcentual (%): "))
+            if MIN_DIFERENCIA_PORCENTUAL < 0:
+                print("Por favor, ingrese un valor no negativo.")
+                continue
+            break
+        except ValueError:
+            print("Por favor, ingrese un número válido.")
+    
+    # MIN_VOLUMEN
+    while True:
+        try:
+            MIN_VOLUMEN = int(input("Mínimo volumen: "))
+            if MIN_VOLUMEN < 0:
+                print("Por favor, ingrese un valor no negativo.")
+                continue
+            break
+        except ValueError:
+            print("Por favor, ingrese un número entero válido.")
+    
+    # MIN_VOLATILIDAD_IMPLÍCITA
+    while True:
+        try:
+            MIN_VOLATILIDAD_IMPLÍCITA = float(input("Mínima volatilidad implícita (%): "))
+            if MIN_VOLATILIDAD_IMPLÍCITA < 0:
+                print("Por favor, ingrese un valor no negativo.")
+                continue
+            break
+        except ValueError:
+            print("Por favor, ingrese un número válido.")
+    
+    # MAX_VOLATILIDAD_IMPLÍCITA
+    while True:
+        try:
+            MAX_VOLATILIDAD_IMPLÍCITA = float(input("Máxima volatilidad implícita (%): "))
+            if MAX_VOLATILIDAD_IMPLÍCITA < MIN_VOLATILIDAD_IMPLÍCITA:
+                print("La volatilidad máxima debe ser mayor o igual a la mínima.")
+                continue
+            break
+        except ValueError:
+            print("Por favor, ingrese un número válido.")
+    
+    # MIN_OPEN_INTEREST
+    while True:
+        try:
+            MIN_OPEN_INTEREST = int(input("Mínimo interés abierto: "))
+            if MIN_OPEN_INTEREST < 0:
+                print("Por favor, ingrese un valor no negativo.")
+                continue
+            break
+        except ValueError:
+            print("Por favor, ingrese un número entero válido.")
+    
+    # FILTRO_TIPO_OPCION
+    while True:
+        FILTRO_TIPO_OPCION = input("Filtro tipo opción (OTM, ITM, TODAS): ").upper()
+        if FILTRO_TIPO_OPCION in ["OTM", "ITM", "TODAS"]:
+            break
+        print("Por favor, ingrese una opción válida: OTM, ITM, o TODAS.")
+    
+    # TOP_CONTRATOS
+    while True:
+        try:
+            TOP_CONTRATOS = int(input("Número de contratos a mostrar en 'Mejores Contratos': "))
+            if TOP_CONTRATOS <= 0:
+                print("Por favor, ingrese un valor mayor a 0.")
+                continue
+            break
+        except ValueError:
+            print("Por favor, ingrese un número entero válido.")
+    
+    # ALERTA_RENTABILIDAD_ANUAL
+    while True:
+        try:
+            ALERTA_RENTABILIDAD_ANUAL = float(input("Rentabilidad anual mínima para alertas (%): "))
+            if ALERTA_RENTABILIDAD_ANUAL < 0:
+                print("Por favor, ingrese un valor no negativo.")
+                continue
+            break
+        except ValueError:
+            print("Por favor, ingrese un número válido.")
+    
+    # ALERTA_MAX_VOLATILIDAD
+    while True:
+        try:
+            ALERTA_MAX_VOLATILIDAD = float(input("Volatilidad implícita máxima para alertas (%): "))
+            if ALERTA_MAX_VOLATILIDAD < 0:
+                print("Por favor, ingrese un valor no negativo.")
+                continue
+            break
+        except ValueError:
+            print("Por favor, ingrese un número válido.")
+    
+    print("\nConfiguración completada. Iniciando análisis...\n")
+    return (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
+            MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MAX_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
+            FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_MAX_VOLATILIDAD)
 
 def obtener_datos_subyacente(ticker):
     """Obtiene el precio del subyacente, mínimo y máximo de 52 semanas."""
@@ -73,17 +187,13 @@ def calcular_diferencia_porcentual(precio_subyacente, break_even):
 
 def enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto):
     """Envía notificaciones a Discord dividiendo los contratos en grupos de 5 con retraso."""
-    # Definir las columnas que se mostrarán en Discord
     headers_resumen = ["Ticker", "Strike", "Precio PUT", "Días al Venc.", "Rent. Diaria", "Rent. Anual", "Volatilidad", "Vencimiento"]
-
-    # Dividir las opciones en grupos de 5
     grupo_tamano = 5
     for i in range(0, len(mejores_opciones), grupo_tamano):
         grupo_opciones = mejores_opciones[i:i + grupo_tamano]
         inicio = i + 1
         fin = min(i + grupo_tamano, len(mejores_opciones))
         
-        # Crear tabla para este grupo
         tabla_resumen = []
         for opcion in grupo_opciones:
             tabla_resumen.append([
@@ -102,7 +212,6 @@ def enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto):
                    f"Mejores {TOP_CONTRATOS} Contratos {tipo_opcion_texto} - Contratos {inicio}-{fin}:\n\n"
                    f"```plaintext\n{tabla}\n```")
 
-        # Verificar si el mensaje excede el límite de 2000 caracteres
         if len(mensaje) > 2000:
             mensaje = (f"Se encontraron opciones que cumplen los filtros.\n\n"
                        f"Mejores {TOP_CONTRATOS} Contratos {tipo_opcion_texto} - Contratos {inicio}-{fin}:\n\n"
@@ -117,23 +226,29 @@ def enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto):
             print(f"Error al enviar notificación a Discord para contratos {inicio}-{fin}: {e}")
             if response.text:
                 print(f"Detalles del error: {response.text}")
-            # Si hay un error, no continuamos intentando enviar más mensajes para evitar más bloqueos
             break
 
-        # Agregar un retraso de 1 segundo entre solicitudes para evitar límites de tasa
         time.sleep(1)
 
-def analizar_opciones(tickers):
-    global SCRIPT_EJECUTADO
+def analizar_opciones():
+    global SCRIPT_EJECUTADO, TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL
+    global MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MAX_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST
+    global FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_MAX_VOLATILIDAD
+
     if SCRIPT_EJECUTADO:
         print("El script ya ha sido ejecutado. Evitando repetición.")
         return
     SCRIPT_EJECUTADO = True
 
+    # Obtener configuración del usuario
+    (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
+     MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MAX_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
+     FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_MAX_VOLATILIDAD) = obtener_configuracion()
+
     # Resumen de condiciones para el archivo .txt
     resumen_condiciones = (
         f"Resumen de condiciones de ejecución - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}:\n"
-        f"Tickers analizados: {', '.join(tickers)}\n"
+        f"Tickers analizados: {', '.join(TICKERS)}\n"
         f"Filtro tipo opción: {FILTRO_TIPO_OPCION}\n"
         f"Mínima rentabilidad anual: {MIN_RENTABILIDAD_ANUAL}%\n"
         f"Máximo días al vencimiento: {MAX_DIAS_VENCIMIENTO}\n"
@@ -144,19 +259,17 @@ def analizar_opciones(tickers):
         f"{'='*50}\n\n"
     )
 
-    resultado = resumen_condiciones  # Agregar resumen al inicio del resultado
-    todas_las_opciones = []  # Lista para almacenar todas las opciones filtradas de todos los tickers
-    todas_las_opciones_df = []  # Lista para exportar a CSV
+    resultado = resumen_condiciones
+    todas_las_opciones = []
+    todas_las_opciones_df = []
 
     try:
-        print(f"Analizando {len(tickers)} tickers: {tickers}")
-        for ticker in tickers:
-            # Separador para cada ticker
+        print(f"Analizando {len(TICKERS)} tickers: {TICKERS}")
+        for ticker in TICKERS:
             resultado += f"\n{'='*50}\nAnalizando ticker: {ticker}\n{'='*50}\n"
             print(f"\n{'='*50}\nAnalizando ticker: {ticker}\n{'='*50}\n")
 
             try:
-                # Obtener datos del subyacente
                 stock, precio_subyacente, minimo_52_semanas, maximo_52_semanas = obtener_datos_subyacente(ticker)
                 resultado += f"Precio del subyacente ({ticker}): ${precio_subyacente:.2f}\n"
                 resultado += f"Mínimo de las últimas 52 semanas: ${minimo_52_semanas:.2f}\n"
@@ -165,7 +278,6 @@ def analizar_opciones(tickers):
                 print(f"Mínimo de las últimas 52 semanas: ${minimo_52_semanas:.2f}")
                 print(f"Máximo de las últimas 52 semanas: ${maximo_52_semanas:.2f}")
 
-                # Obtener opciones PUT
                 opciones_put = obtener_opciones_put(stock)
                 print(f"Se encontraron {len(opciones_put)} opciones PUT para {ticker}")
                 opciones_filtradas = []
@@ -175,18 +287,16 @@ def analizar_opciones(tickers):
                     vencimiento_str = contrato["expirationDate"]
                     dias_vencimiento = (datetime.strptime(vencimiento_str, "%Y-%m-%d") - datetime.now()).days
                     volumen = contrato["volume"]
-                    volatilidad_implícita = contrato["impliedVolatility"] * 100  # Convertir a %
+                    volatilidad_implícita = contrato["impliedVolatility"] * 100
                     open_interest = contrato["openInterest"]
 
-                    # Filtro OTM/ITM
                     if FILTRO_TIPO_OPCION == "OTM":
-                        if strike >= precio_subyacente:  # Descarta ITM y ATM
+                        if strike >= precio_subyacente:
                             continue
                     elif FILTRO_TIPO_OPCION == "ITM":
-                        if strike < precio_subyacente:  # Descarta OTM (ATM se considera ITM)
+                        if strike < precio_subyacente:
                             continue
 
-                    # Otros filtros
                     if dias_vencimiento <= 0 or dias_vencimiento > MAX_DIAS_VENCIMIENTO:
                         continue
                     if volumen < MIN_VOLUMEN:
@@ -200,7 +310,6 @@ def analizar_opciones(tickers):
                     break_even = calcular_break_even(strike, precio_put)
                     diferencia_porcentual = calcular_diferencia_porcentual(precio_subyacente, break_even)
 
-                    # Filtrar por rentabilidad anual mínima y diferencia porcentual mínima
                     if rent_anual >= MIN_RENTABILIDAD_ANUAL and diferencia_porcentual >= MIN_DIFERENCIA_PORCENTUAL:
                         opcion = {
                             "ticker": ticker,
@@ -219,7 +328,6 @@ def analizar_opciones(tickers):
                         opciones_filtradas.append(opcion)
                         todas_las_opciones.append(opcion)
 
-                        # Preparar datos para CSV
                         todas_las_opciones_df.append([
                             ticker,
                             f"${strike:.2f}",
@@ -240,7 +348,6 @@ def analizar_opciones(tickers):
                     resultado += f"\nOpciones PUT {tipo_opcion_texto} con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}, volatilidad entre {MIN_VOLATILIDAD_IMPLÍCITA}% y {MAX_VOLATILIDAD_IMPLÍCITA}%, interés abierto > {MIN_OPEN_INTEREST}):\n"
                     print(f"Se encontraron {len(opciones_filtradas)} opciones que cumplen los filtros para {ticker}")
                     
-                    # Crear tabla para mostrar en consola y guardar en resultado
                     tabla_datos = []
                     for opcion in opciones_filtradas:
                         tabla_datos.append([
@@ -275,7 +382,6 @@ def analizar_opciones(tickers):
                     resultado += f"\n{tabla}\n"
                     print(tabla)
 
-                    # Verificar umbrales para alertas (Idea 7)
                     for opcion in opciones_filtradas:
                         if (opcion['rentabilidad_anual'] >= ALERTA_RENTABILIDAD_ANUAL and 
                             opcion['volatilidad_implícita'] <= ALERTA_MAX_VOLATILIDAD):
@@ -293,7 +399,6 @@ def analizar_opciones(tickers):
                 print(error_msg)
                 continue
 
-        # Exportar todas las opciones a CSV (Idea 1)
         if todas_las_opciones_df:
             headers_csv = [
                 "Ticker",
@@ -313,11 +418,9 @@ def analizar_opciones(tickers):
             df_todas.to_csv("todas_las_opciones.csv", index=False)
             print("Todas las opciones exportadas a 'todas_las_opciones.csv'.")
 
-        # Tabla adicional: Mejores contratos
         print(f"Total de opciones filtradas (todos los tickers): {len(todas_las_opciones)}")
-        mejores_opciones_df = []  # Lista para exportar Mejores Contratos a CSV
+        mejores_opciones_df = []
         if todas_las_opciones:
-            # Ordenar por mayor rentabilidad anual, menor tiempo de vencimiento, y mayor diferencia porcentual
             mejores_opciones = sorted(
                 todas_las_opciones,
                 key=lambda x: (-x['rentabilidad_anual'], x['dias_vencimiento'], -x['diferencia_porcentual'])
@@ -344,7 +447,6 @@ def analizar_opciones(tickers):
                     opcion['open_interest']
                 ])
 
-                # Preparar datos para CSV
                 mejores_opciones_df.append([
                     opcion['ticker'],
                     f"${opcion['strike']:.2f}",
@@ -379,19 +481,16 @@ def analizar_opciones(tickers):
             resultado += f"\n{tabla}\n"
             print(tabla)
 
-            # Exportar Mejores Contratos a CSV (Idea 1)
             df_mejores = pd.DataFrame(mejores_opciones_df, columns=headers_mejores)
             df_mejores.to_csv("mejores_contratos.csv", index=False)
             print("Mejores contratos exportados a 'mejores_contratos.csv'.")
 
-            # Enviar notificación a Discord (Idea 2)
             enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto)
 
         else:
             resultado += f"\nNo se encontraron opciones que cumplan los filtros en ningún ticker.\n"
             print("No se encontraron opciones que cumplan los filtros en ningún ticker.")
 
-        # Guardar resultados en un archivo de texto
         with open("resultados.txt", "w") as f:
             f.write(resultado)
 
@@ -402,4 +501,4 @@ def analizar_opciones(tickers):
             f.write(error_msg)
 
 if __name__ == "__main__":
-    analizar_opciones(TICKERS)
+    analizar_opciones()
