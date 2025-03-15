@@ -4,11 +4,14 @@ import os
 from tabulate import tabulate
 
 # Configuración
-TICKERS = list(set(["AAPL", "NVDA","EPAM","GLNG"]))  # Aseguramos que no haya duplicados
-MIN_RENTABILIDAD_ANUAL = 30
-MAX_DIAS_VENCIMIENTO = 60  # Filtro máximo de 90 días
+TICKERS = list(set(["AAPL", "MSFT", "GOOGL", "EPAM"]))  # Aseguramos que no haya duplicados
+MIN_RENTABILIDAD_ANUAL = 40
+MAX_DIAS_VENCIMIENTO = 90  # Filtro máximo de 90 días
 MIN_DIFERENCIA_PORCENTUAL = 5  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
-MIN_VOLUMEN = 50  # Reducimos el volumen mínimo para permitir más opciones
+MIN_VOLUMEN = 50  # Filtro mínimo de volumen
+MIN_VOLATILIDAD_IMPLÍCITA = 20  # Mínimo de volatilidad implícita en %
+MAX_VOLATILIDAD_IMPLÍCITA = 50  # Máximo de volatilidad implícita en %
+MIN_OPEN_INTEREST = 100  # Mínimo de interés abierto
 TOP_CONTRATOS = 5  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
 
 # Variable para evitar ejecuciones múltiples
@@ -25,7 +28,7 @@ def obtener_datos_subyacente(ticker):
     return stock, precio, minimo_52_semanas, maximo_52_semanas
 
 def obtener_opciones_put(stock):
-    """Obtiene las opciones PUT del ticker."""
+    """Obtiene las opciones PUT del ticker, incluyendo interés abierto."""
     fechas_vencimiento = stock.options
     opciones_put = []
     for fecha in fechas_vencimiento:
@@ -37,7 +40,8 @@ def obtener_opciones_put(stock):
                 "lastPrice": put["lastPrice"],
                 "expirationDate": fecha,
                 "volume": put.get("volume", 0),
-                "impliedVolatility": put.get("impliedVolatility", 0)
+                "impliedVolatility": put.get("impliedVolatility", 0),
+                "openInterest": put.get("openInterest", 0)  # Añadimos interés abierto
             })
     return opciones_put
 
@@ -94,11 +98,16 @@ def analizar_opciones(tickers):
                     dias_vencimiento = (datetime.strptime(vencimiento_str, "%Y-%m-%d") - datetime.now()).days
                     volumen = contrato["volume"]
                     volatilidad_implícita = contrato["impliedVolatility"] * 100  # Convertir a %
+                    open_interest = contrato["openInterest"]  # Obtener interés abierto
 
                     # Filtros
                     if dias_vencimiento <= 0 or dias_vencimiento > MAX_DIAS_VENCIMIENTO:
                         continue
                     if volumen < MIN_VOLUMEN:
+                        continue
+                    if volatilidad_implícita < MIN_VOLATILIDAD_IMPLÍCITA or volatilidad_implícita > MAX_VOLATILIDAD_IMPLÍCITA:
+                        continue
+                    if open_interest < MIN_OPEN_INTEREST:
                         continue
 
                     rent_diaria, rent_anual = calcular_rentabilidad(precio_put, precio_subyacente, dias_vencimiento)
@@ -118,13 +127,14 @@ def analizar_opciones(tickers):
                             "break_even": break_even,
                             "diferencia_porcentual": diferencia_porcentual,
                             "volatilidad_implícita": volatilidad_implícita,
-                            "volumen": volumen
+                            "volumen": volumen,
+                            "open_interest": open_interest  # Añadimos interés abierto al diccionario
                         }
                         opciones_filtradas.append(opcion)
                         todas_las_opciones.append(opcion)
 
                 if opciones_filtradas:
-                    resultado += f"\nOpciones PUT con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}):\n"
+                    resultado += f"\nOpciones PUT con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}, volatilidad entre {MIN_VOLATILIDAD_IMPLÍCITA}% y {MAX_VOLATILIDAD_IMPLÍCITA}%, interés abierto > {MIN_OPEN_INTEREST}):\n"
                     print(f"Se encontraron {len(opciones_filtradas)} opciones que cumplen los filtros para {ticker}")
                     
                     # Crear una tabla con los datos para este ticker
@@ -140,7 +150,8 @@ def analizar_opciones(tickers):
                             f"${opcion['break_even']:.2f}",
                             f"{opcion['diferencia_porcentual']:.2f}%",
                             f"{opcion['volatilidad_implícita']:.2f}%",
-                            opcion['volumen']
+                            opcion['volumen'],
+                            opcion['open_interest']
                         ])
                     
                     headers = [
@@ -153,15 +164,16 @@ def analizar_opciones(tickers):
                         "Break-even",
                         "Dif. % (Suby.-Break.)",
                         "Volatilidad Implícita",
-                        "Volumen"
+                        "Volumen",
+                        "Interés Abierto"
                     ]
                     
                     tabla = tabulate(tabla_datos, headers=headers, tablefmt="grid")
                     resultado += f"\n{tabla}\n"
                     print(tabla)
                 else:
-                    resultado += f"\nNo se encontraron opciones PUT con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% dentro de {MAX_DIAS_VENCIMIENTO} días y volumen > {MIN_VOLUMEN}.\n"
-                    print(f"No se encontraron opciones que cumplan los filtros para {ticker}")
+                    resultado += "\nNo se consiguieron resultados para este ticker.\n"
+                    print("No se consiguieron resultados para este ticker.")
 
             except Exception as e:
                 error_msg = f"Error al analizar {ticker}: {e}\n"
@@ -194,7 +206,8 @@ def analizar_opciones(tickers):
                     f"${opcion['break_even']:.2f}",
                     f"{opcion['diferencia_porcentual']:.2f}%",
                     f"{opcion['volatilidad_implícita']:.2f}%",
-                    opcion['volumen']
+                    opcion['volumen'],
+                    opcion['open_interest']
                 ])
 
             headers_mejores = [
@@ -208,7 +221,8 @@ def analizar_opciones(tickers):
                 "Break-even",
                 "Dif. % (Suby.-Break.)",
                 "Volatilidad Implícita",
-                "Volumen"
+                "Volumen",
+                "Interés Abierto"
             ]
 
             tabla = tabulate(tabla_mejores, headers=headers_mejores, tablefmt="grid")
