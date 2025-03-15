@@ -71,42 +71,51 @@ def calcular_diferencia_porcentual(precio_subyacente, break_even):
     return ((precio_subyacente - break_even) / precio_subyacente) * 100
 
 def enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto):
-    """Envía una notificación a Discord con un resumen de los mejores contratos."""
-    # Crear un mensaje con las columnas solicitadas
-    tabla_resumen = []
+    """Envía notificaciones a Discord dividiendo los contratos en grupos de 5."""
+    # Definir las columnas que se mostrarán en Discord
     headers_resumen = ["Ticker", "Strike", "Precio PUT", "Días al Venc.", "Rent. Diaria", "Rent. Anual", "Volatilidad", "Vencimiento"]
-    for opcion in mejores_opciones:
-        tabla_resumen.append([
-            opcion['ticker'],
-            f"${opcion['strike']:.2f}",
-            f"${opcion['precio_put']:.2f}",
-            opcion['dias_vencimiento'],
-            f"{opcion['rentabilidad_diaria']:.2f}%",
-            f"{opcion['rentabilidad_anual']:.2f}%",
-            f"{opcion['volatilidad_implícita']:.2f}%",
-            opcion['vencimiento']
-        ])
-    
-    tabla = tabulate(tabla_resumen, headers=headers_resumen, tablefmt="grid")
-    mensaje = (f"Se encontraron opciones que cumplen los filtros.\n\n"
-               f"Mejores {TOP_CONTRATOS} Contratos {tipo_opcion_texto}:\n\n"
-               f"```plaintext\n{tabla}\n```")
 
-    # Verificar si el mensaje excede el límite de 2000 caracteres
-    if len(mensaje) > 2000:
+    # Dividir las opciones en grupos de 5
+    grupo_tamano = 5
+    for i in range(0, len(mejores_opciones), grupo_tamano):
+        grupo_opciones = mejores_opciones[i:i + grupo_tamano]
+        inicio = i + 1
+        fin = min(i + grupo_tamano, len(mejores_opciones))
+        
+        # Crear tabla para este grupo
+        tabla_resumen = []
+        for opcion in grupo_opciones:
+            tabla_resumen.append([
+                opcion['ticker'],
+                f"${opcion['strike']:.2f}",
+                f"${opcion['precio_put']:.2f}",
+                opcion['dias_vencimiento'],
+                f"{opcion['rentabilidad_diaria']:.2f}%",
+                f"{opcion['rentabilidad_anual']:.2f}%",
+                f"{opcion['volatilidad_implícita']:.2f}%",
+                opcion['vencimiento']
+            ])
+        
+        tabla = tabulate(tabla_resumen, headers=headers_resumen, tablefmt="grid")
         mensaje = (f"Se encontraron opciones que cumplen los filtros.\n\n"
-                   f"Mejores {TOP_CONTRATOS} Contratos {tipo_opcion_texto}:\n\n"
-                   f"Demasiados datos para mostrar. Revisa los archivos CSV para más detalles.\n")
+                   f"Mejores {TOP_CONTRATOS} Contratos {tipo_opcion_texto} - Contratos {inicio}-{fin}:\n\n"
+                   f"```plaintext\n{tabla}\n```")
 
-    payload = {"content": mensaje}
-    try:
-        response = requests.post(DISCORD_WEBHOOK_URL, json=payload)
-        response.raise_for_status()
-        print("Notificación enviada a Discord exitosamente.")
-    except requests.exceptions.RequestException as e:
-        print(f"Error al enviar notificación a Discord: {e}")
-        if response.text:
-            print(f"Detalles del error: {response.text}")
+        # Verificar si el mensaje excede el límite de 2000 caracteres
+        if len(mensaje) > 2000:
+            mensaje = (f"Se encontraron opciones que cumplen los filtros.\n\n"
+                       f"Mejores {TOP_CONTRATOS} Contratos {tipo_opcion_texto} - Contratos {inicio}-{fin}:\n\n"
+                       f"Demasiados datos para mostrar. Revisa los archivos CSV para más detalles.\n")
+
+        payload = {"content": mensaje}
+        try:
+            response = requests.post(DISCORD_WEBHOOK_URL, json=payload)
+            response.raise_for_status()
+            print(f"Notificación enviada a Discord exitosamente para contratos {inicio}-{fin}.")
+        except requests.exceptions.RequestException as e:
+            print(f"Error al enviar notificación a Discord para contratos {inicio}-{fin}: {e}")
+            if response.text:
+                print(f"Detalles del error: {response.text}")
 
 def analizar_opciones(tickers):
     global SCRIPT_EJECUTADO
