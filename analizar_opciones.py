@@ -6,13 +6,13 @@ import pandas as pd  # Para exportar a CSV
 import requests  # Para enviar notificaciones a Discord
 
 # Configuración
-TICKERS = list(set(["NA9.DE","TEP.PA", "GOOGL","EPAM" ,"NFE" ,"GLNG","GLOB","NVDA"]))  # Aseguramos que no haya duplicados
-MIN_RENTABILIDAD_ANUAL = 40
+TICKERS = list(set(["NA9.DE" ,"TEP.PA","GOOGL" ,"EPAM" ,"NFE" ,"GLNG" ,"GLOB" ,"NVDA" ]))  # Aseguramos que no haya duplicados
+MIN_RENTABILIDAD_ANUAL = 30
 MAX_DIAS_VENCIMIENTO = 60  # Filtro máximo de 90 días
 MIN_DIFERENCIA_PORCENTUAL = 5  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
-MIN_VOLUMEN = 50  # Filtro mínimo de volumen
-MIN_VOLATILIDAD_IMPLÍCITA = 30  # Mínimo de volatilidad implícita en %
-MAX_VOLATILIDAD_IMPLÍCITA = 50  # Máximo de volatilidad implícita en %
+MIN_VOLUMEN = 10  # Filtro mínimo de volumen
+MIN_VOLATILIDAD_IMPLÍCITA = 25  # Mínimo de volatilidad implícita en %
+MAX_VOLATILIDAD_IMPLÍCITA = 60  # Máximo de volatilidad implícita en %
 MIN_OPEN_INTEREST = 1  # Mínimo de interés abierto
 FILTRO_TIPO_OPCION = "OTM"  # Opciones: "OTM", "ITM", "TODAS"
 TOP_CONTRATOS = 10  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
