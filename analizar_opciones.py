@@ -12,6 +12,7 @@ MIN_VOLUMEN = 50  # Filtro mínimo de volumen
 MIN_VOLATILIDAD_IMPLÍCITA = 20  # Mínimo de volatilidad implícita en %
 MAX_VOLATILIDAD_IMPLÍCITA = 50  # Máximo de volatilidad implícita en %
 MIN_OPEN_INTEREST = 100  # Mínimo de interés abierto
+FILTRO_TIPO_OPCION = "OTM"  # Opciones: "OTM", "ITM", "TODAS"
 TOP_CONTRATOS = 5  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
 
 # Variable para evitar ejecuciones múltiples
@@ -41,7 +42,7 @@ def obtener_opciones_put(stock):
                 "expirationDate": fecha,
                 "volume": put.get("volume", 0),
                 "impliedVolatility": put.get("impliedVolatility", 0),
-                "openInterest": put.get("openInterest", 0)  # Añadimos interés abierto
+                "openInterest": put.get("openInterest", 0)
             })
     return opciones_put
 
@@ -98,9 +99,18 @@ def analizar_opciones(tickers):
                     dias_vencimiento = (datetime.strptime(vencimiento_str, "%Y-%m-%d") - datetime.now()).days
                     volumen = contrato["volume"]
                     volatilidad_implícita = contrato["impliedVolatility"] * 100  # Convertir a %
-                    open_interest = contrato["openInterest"]  # Obtener interés abierto
+                    open_interest = contrato["openInterest"]
 
-                    # Filtros
+                    # Filtro OTM/ITM
+                    if FILTRO_TIPO_OPCION == "OTM":
+                        if strike >= precio_subyacente:  # Descarta ITM y ATM
+                            continue
+                    elif FILTRO_TIPO_OPCION == "ITM":
+                        if strike < precio_subyacente:  # Descarta OTM (ATM se considera ITM)
+                            continue
+                    # Si FILTRO_TIPO_OPCION es "TODAS", no aplicamos este filtro
+
+                    # Otros filtros
                     if dias_vencimiento <= 0 or dias_vencimiento > MAX_DIAS_VENCIMIENTO:
                         continue
                     if volumen < MIN_VOLUMEN:
@@ -128,13 +138,14 @@ def analizar_opciones(tickers):
                             "diferencia_porcentual": diferencia_porcentual,
                             "volatilidad_implícita": volatilidad_implícita,
                             "volumen": volumen,
-                            "open_interest": open_interest  # Añadimos interés abierto al diccionario
+                            "open_interest": open_interest
                         }
                         opciones_filtradas.append(opcion)
                         todas_las_opciones.append(opcion)
 
                 if opciones_filtradas:
-                    resultado += f"\nOpciones PUT con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}, volatilidad entre {MIN_VOLATILIDAD_IMPLÍCITA}% y {MAX_VOLATILIDAD_IMPLÍCITA}%, interés abierto > {MIN_OPEN_INTEREST}):\n"
+                    tipo_opcion_texto = "Out of the Money" if FILTRO_TIPO_OPCION == "OTM" else "In the Money" if FILTRO_TIPO_OPCION == "ITM" else "Todas"
+                    resultado += f"\nOpciones PUT {tipo_opcion_texto} con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}, volatilidad entre {MIN_VOLATILIDAD_IMPLÍCITA}% y {MAX_VOLATILIDAD_IMPLÍCITA}%, interés abierto > {MIN_OPEN_INTEREST}):\n"
                     print(f"Se encontraron {len(opciones_filtradas)} opciones que cumplen los filtros para {ticker}")
                     
                     # Crear una tabla con los datos para este ticker
@@ -190,8 +201,9 @@ def analizar_opciones(tickers):
                 key=lambda x: (-x['rentabilidad_anual'], x['dias_vencimiento'], -x['diferencia_porcentual'])
             )[:TOP_CONTRATOS]
 
-            resultado += f"\n{'='*50}\nMejores {TOP_CONTRATOS} Contratos (Mayor Rentabilidad Anual, Menor Tiempo, Mayor Diferencia %):\n{'='*50}\n"
-            print(f"\n{'='*50}\nMejores {TOP_CONTRATOS} Contratos (Mayor Rentabilidad Anual, Menor Tiempo, Mayor Diferencia %):\n{'='*50}\n")
+            tipo_opcion_texto = "Out of the Money" if FILTRO_TIPO_OPCION == "OTM" else "In the Money" if FILTRO_TIPO_OPCION == "ITM" else "Todas"
+            resultado += f"\n{'='*50}\nMejores {TOP_CONTRATOS} Contratos {tipo_opcion_texto} (Mayor Rentabilidad Anual, Menor Tiempo, Mayor Diferencia %):\n{'='*50}\n"
+            print(f"\n{'='*50}\nMejores {TOP_CONTRATOS} Contratos {tipo_opcion_texto} (Mayor Rentabilidad Anual, Menor Tiempo, Mayor Diferencia %):\n{'='*50}\n")
 
             tabla_mejores = []
             for opcion in mejores_opciones:
