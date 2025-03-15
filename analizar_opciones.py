@@ -9,7 +9,7 @@ import requests  # Para enviar notificaciones a Discord
 TICKERS = list(set(["NA9.DE" ,"TEP.PA","GOOGL" ,"EPAM" ,"NFE" ,"GLNG" ,"GLOB" ,"NVDA" ]))  # Aseguramos que no haya duplicados
 MIN_RENTABILIDAD_ANUAL = 30
 MAX_DIAS_VENCIMIENTO = 60  # Filtro máximo de 90 días
-MIN_DIFERENCIA_PORCENTUAL = 5  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
+MIN_DIFERENCIA_PORCENTUAL = 7  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
 MIN_VOLUMEN = 10  # Filtro mínimo de volumen
 MIN_VOLATILIDAD_IMPLÍCITA = 25  # Mínimo de volatilidad implícita en %
 MAX_VOLATILIDAD_IMPLÍCITA = 60  # Máximo de volatilidad implícita en %
