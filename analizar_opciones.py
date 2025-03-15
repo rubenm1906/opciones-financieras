@@ -12,47 +12,63 @@ DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1350463523196768356/ePmW
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
 
+# Configuraciones por defecto (ajustables manualmente)
+DEFAULT_CONFIG = {
+    "TICKERS": "NA9.DE,TEP.PA,GOOGL,EPAM,NFE,GLNG,GLOB,NVDA",
+    "MIN_RENTABILIDAD_ANUAL": 45.0,
+    "MAX_DIAS_VENCIMIENTO": 45,
+    "MIN_DIFERENCIA_PORCENTUAL": 5.0,
+    "MIN_VOLUMEN": 1,
+    "MIN_VOLATILIDAD_IMPLÍCITA": 20.0,
+    "MAX_VOLATILIDAD_IMPLÍCITA": 50.0,
+    "MIN_OPEN_INTEREST": 1,
+    "FILTRO_TIPO_OPCION": "OTM",
+    "TOP_CONTRATOS": 10,
+    "ALERTA_RENTABILIDAD_ANUAL": 50.0,
+    "ALERTA_MAX_VOLATILIDAD": 30.0
+}
+
 def obtener_configuracion():
-    """Obtiene la configuración desde variables de entorno con valores por defecto."""
+    """Obtiene la configuración desde variables de entorno con valores por defecto del script."""
     # TICKERS
-    TICKERS = os.getenv("TICKERS", "AAPL,MSFT,GOOGL,EPAM,TEP.PA")
+    TICKERS = os.getenv("TICKERS", DEFAULT_CONFIG["TICKERS"])
     TICKERS = list(set(TICKERS.split(",")))  # Convertir a lista y eliminar duplicados
 
     # MIN_RENTABILIDAD_ANUAL
-    MIN_RENTABILIDAD_ANUAL = float(os.getenv("MIN_RENTABILIDAD_ANUAL", 40))
+    MIN_RENTABILIDAD_ANUAL = float(os.getenv("MIN_RENTABILIDAD_ANUAL", str(DEFAULT_CONFIG["MIN_RENTABILIDAD_ANUAL"])))
 
     # MAX_DIAS_VENCIMIENTO
-    MAX_DIAS_VENCIMIENTO = int(os.getenv("MAX_DIAS_VENCIMIENTO", 90))
+    MAX_DIAS_VENCIMIENTO = int(os.getenv("MAX_DIAS_VENCIMIENTO", str(DEFAULT_CONFIG["MAX_DIAS_VENCIMIENTO"])))
 
     # MIN_DIFERENCIA_PORCENTUAL
-    MIN_DIFERENCIA_PORCENTUAL = float(os.getenv("MIN_DIFERENCIA_PORCENTUAL", 5))
+    MIN_DIFERENCIA_PORCENTUAL = float(os.getenv("MIN_DIFERENCIA_PORCENTUAL", str(DEFAULT_CONFIG["MIN_DIFERENCIA_PORCENTUAL"])))
 
     # MIN_VOLUMEN
-    MIN_VOLUMEN = int(os.getenv("MIN_VOLUMEN", 50))
+    MIN_VOLUMEN = int(os.getenv("MIN_VOLUMEN", str(DEFAULT_CONFIG["MIN_VOLUMEN"])))
 
     # MIN_VOLATILIDAD_IMPLÍCITA
-    MIN_VOLATILIDAD_IMPLÍCITA = float(os.getenv("MIN_VOLATILIDAD_IMPLÍCITA", 20))
+    MIN_VOLATILIDAD_IMPLÍCITA = float(os.getenv("MIN_VOLATILIDAD_IMPLÍCITA", str(DEFAULT_CONFIG["MIN_VOLATILIDAD_IMPLÍCITA"])))
 
     # MAX_VOLATILIDAD_IMPLÍCITA
-    MAX_VOLATILIDAD_IMPLÍCITA = float(os.getenv("MAX_VOLATILIDAD_IMPLÍCITA", 50))
+    MAX_VOLATILIDAD_IMPLÍCITA = float(os.getenv("MAX_VOLATILIDAD_IMPLÍCITA", str(DEFAULT_CONFIG["MAX_VOLATILIDAD_IMPLÍCITA"])))
 
     # MIN_OPEN_INTEREST
-    MIN_OPEN_INTEREST = int(os.getenv("MIN_OPEN_INTEREST", 100))
+    MIN_OPEN_INTEREST = int(os.getenv("MIN_OPEN_INTEREST", str(DEFAULT_CONFIG["MIN_OPEN_INTEREST"])))
 
     # FILTRO_TIPO_OPCION
-    FILTRO_TIPO_OPCION = os.getenv("FILTRO_TIPO_OPCION", "OTM").upper()
+    FILTRO_TIPO_OPCION = os.getenv("FILTRO_TIPO_OPCION", DEFAULT_CONFIG["FILTRO_TIPO_OPCION"]).upper()
     if FILTRO_TIPO_OPCION not in ["OTM", "ITM", "TODAS"]:
-        print(f"Valor inválido para FILTRO_TIPO_OPCION: {FILTRO_TIPO_OPCION}. Usando valor por defecto: OTM")
-        FILTRO_TIPO_OPCION = "OTM"
+        print(f"Valor inválido para FILTRO_TIPO_OPCION: {FILTRO_TIPO_OPCION}. Usando valor por defecto: {DEFAULT_CONFIG['FILTRO_TIPO_OPCION']}")
+        FILTRO_TIPO_OPCION = DEFAULT_CONFIG["FILTRO_TIPO_OPCION"]
 
     # TOP_CONTRATOS
-    TOP_CONTRATOS = int(os.getenv("TOP_CONTRATOS", 5))
+    TOP_CONTRATOS = int(os.getenv("TOP_CONTRATOS", str(DEFAULT_CONFIG["TOP_CONTRATOS"])))
 
     # ALERTA_RENTABILIDAD_ANUAL
-    ALERTA_RENTABILIDAD_ANUAL = float(os.getenv("ALERTA_RENTABILIDAD_ANUAL", 50))
+    ALERTA_RENTABILIDAD_ANUAL = float(os.getenv("ALERTA_RENTABILIDAD_ANUAL", str(DEFAULT_CONFIG["ALERTA_RENTABILIDAD_ANUAL"])))
 
     # ALERTA_MAX_VOLATILIDAD
-    ALERTA_MAX_VOLATILIDAD = float(os.getenv("ALERTA_MAX_VOLATILIDAD", 30))
+    ALERTA_MAX_VOLATILIDAD = float(os.getenv("ALERTA_MAX_VOLATILIDAD", str(DEFAULT_CONFIG["ALERTA_MAX_VOLATILIDAD"])))
 
     return (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
             MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MAX_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
@@ -154,10 +170,13 @@ def analizar_opciones():
         return
     SCRIPT_EJECUTADO = True
 
-    # Obtener configuración desde variables de entorno
+    # Obtener configuración desde variables de entorno con valores por defecto del script
     (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
      MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MAX_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
      FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_MAX_VOLATILIDAD) = obtener_configuracion()
+
+    # Detectar si es una ejecución manual o automática
+    es_ejecucion_manual = os.getenv("GITHUB_EVENT_NAME", "schedule") == "workflow_dispatch"
 
     # Resumen de condiciones para el archivo .txt
     resumen_condiciones = (
@@ -395,11 +414,13 @@ def analizar_opciones():
             resultado += f"\n{tabla}\n"
             print(tabla)
 
+            # Enviar notificación solo si es una ejecución automática
+            if not es_ejecucion_manual and mejores_opciones:
+                enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto, TOP_CONTRATOS)
+
             df_mejores = pd.DataFrame(mejores_opciones_df, columns=headers_mejores)
             df_mejores.to_csv("mejores_contratos.csv", index=False)
             print("Mejores contratos exportados a 'mejores_contratos.csv'.")
-
-            enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto, TOP_CONTRATOS)
 
         else:
             resultado += f"\nNo se encontraron opciones que cumplan los filtros en ningún ticker.\n"
