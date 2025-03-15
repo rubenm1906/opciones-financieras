@@ -19,13 +19,12 @@ DEFAULT_CONFIG = {
     "MAX_DIAS_VENCIMIENTO": 45,
     "MIN_DIFERENCIA_PORCENTUAL": 5.0,
     "MIN_VOLUMEN": 1,
-    "MIN_VOLATILIDAD_IMPLÍCITA": 20.0,
-    "MAX_VOLATILIDAD_IMPLÍCITA": 50.0,
+    "MIN_VOLATILIDAD_IMPLÍCITA": 35.0,  # Mínimo de volatilidad para filtros
     "MIN_OPEN_INTEREST": 1,
     "FILTRO_TIPO_OPCION": "OTM",
     "TOP_CONTRATOS": 10,
     "ALERTA_RENTABILIDAD_ANUAL": 50.0,
-    "ALERTA_MAX_VOLATILIDAD": 30.0
+    "ALERTA_VOLATILIDAD_MINIMA": 50.0  # Mínimo de volatilidad para alertas
 }
 
 def obtener_configuracion():
@@ -49,9 +48,6 @@ def obtener_configuracion():
     # MIN_VOLATILIDAD_IMPLÍCITA
     MIN_VOLATILIDAD_IMPLÍCITA = float(os.getenv("MIN_VOLATILIDAD_IMPLÍCITA", str(DEFAULT_CONFIG["MIN_VOLATILIDAD_IMPLÍCITA"])))
 
-    # MAX_VOLATILIDAD_IMPLÍCITA
-    MAX_VOLATILIDAD_IMPLÍCITA = float(os.getenv("MAX_VOLATILIDAD_IMPLÍCITA", str(DEFAULT_CONFIG["MAX_VOLATILIDAD_IMPLÍCITA"])))
-
     # MIN_OPEN_INTEREST
     MIN_OPEN_INTEREST = int(os.getenv("MIN_OPEN_INTEREST", str(DEFAULT_CONFIG["MIN_OPEN_INTEREST"])))
 
@@ -67,12 +63,12 @@ def obtener_configuracion():
     # ALERTA_RENTABILIDAD_ANUAL
     ALERTA_RENTABILIDAD_ANUAL = float(os.getenv("ALERTA_RENTABILIDAD_ANUAL", str(DEFAULT_CONFIG["ALERTA_RENTABILIDAD_ANUAL"])))
 
-    # ALERTA_MAX_VOLATILIDAD
-    ALERTA_MAX_VOLATILIDAD = float(os.getenv("ALERTA_MAX_VOLATILIDAD", str(DEFAULT_CONFIG["ALERTA_MAX_VOLATILIDAD"])))
+    # ALERTA_VOLATILIDAD_MINIMA
+    ALERTA_VOLATILIDAD_MINIMA = float(os.getenv("ALERTA_VOLATILIDAD_MINIMA", str(DEFAULT_CONFIG["ALERTA_VOLATILIDAD_MINIMA"])))
 
     return (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
-            MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MAX_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
-            FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_MAX_VOLATILIDAD)
+            MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
+            FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_VOLATILIDAD_MINIMA)
 
 def obtener_datos_subyacente(ticker):
     """Obtiene el precio del subyacente, mínimo y máximo de 52 semanas."""
@@ -172,8 +168,8 @@ def analizar_opciones():
 
     # Obtener configuración desde variables de entorno con valores por defecto del script
     (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
-     MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MAX_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
-     FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_MAX_VOLATILIDAD) = obtener_configuracion()
+     MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
+     FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_VOLATILIDAD_MINIMA) = obtener_configuracion()
 
     # Detectar si es una ejecución manual o automática
     es_ejecucion_manual = os.getenv("GITHUB_EVENT_NAME", "schedule") == "workflow_dispatch"
@@ -187,7 +183,7 @@ def analizar_opciones():
         f"Máximo días al vencimiento: {MAX_DIAS_VENCIMIENTO}\n"
         f"Mínima diferencia porcentual: {MIN_DIFERENCIA_PORCENTUAL}%\n"
         f"Mínimo volumen: {MIN_VOLUMEN}\n"
-        f"Volatilidad implícita (mínima-máxima): {MIN_VOLATILIDAD_IMPLÍCITA}% - {MAX_VOLATILIDAD_IMPLÍCITA}%\n"
+        f"Volatilidad implícita mínima: {MIN_VOLATILIDAD_IMPLÍCITA}%\n"
         f"Mínimo interés abierto: {MIN_OPEN_INTEREST}\n"
         f"{'='*50}\n\n"
     )
@@ -234,7 +230,7 @@ def analizar_opciones():
                         continue
                     if volumen < MIN_VOLUMEN:
                         continue
-                    if volatilidad_implícita < MIN_VOLATILIDAD_IMPLÍCITA or volatilidad_implícita > MAX_VOLATILIDAD_IMPLÍCITA:
+                    if volatilidad_implícita < MIN_VOLATILIDAD_IMPLÍCITA:  # Solo se aplica el mínimo
                         continue
                     if open_interest < MIN_OPEN_INTEREST:
                         continue
@@ -278,7 +274,7 @@ def analizar_opciones():
 
                 if opciones_filtradas:
                     tipo_opcion_texto = "Out of the Money" if FILTRO_TIPO_OPCION == "OTM" else "In the Money" if FILTRO_TIPO_OPCION == "ITM" else "Todas"
-                    resultado += f"\nOpciones PUT {tipo_opcion_texto} con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}, volatilidad entre {MIN_VOLATILIDAD_IMPLÍCITA}% y {MAX_VOLATILIDAD_IMPLÍCITA}%, interés abierto > {MIN_OPEN_INTEREST}):\n"
+                    resultado += f"\nOpciones PUT {tipo_opcion_texto} con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}, volatilidad >= {MIN_VOLATILIDAD_IMPLÍCITA}%, interés abierto > {MIN_OPEN_INTEREST}):\n"
                     print(f"Se encontraron {len(opciones_filtradas)} opciones que cumplen los filtros para {ticker}")
                     
                     tabla_datos = []
@@ -317,7 +313,7 @@ def analizar_opciones():
 
                     for opcion in opciones_filtradas:
                         if (opcion['rentabilidad_anual'] >= ALERTA_RENTABILIDAD_ANUAL and 
-                            opcion['volatilidad_implícita'] <= ALERTA_MAX_VOLATILIDAD):
+                            opcion['volatilidad_implícita'] >= ALERTA_VOLATILIDAD_MINIMA):  # Alerta con mínimo de 50.0%
                             alerta_msg = f"¡Oportunidad destacada! {ticker}: Rentabilidad anual: {opcion['rentabilidad_anual']:.2f}%, Volatilidad: {opcion['volatilidad_implícita']:.2f}% (Strike: ${opcion['strike']:.2f}, Vencimiento: {opcion['vencimiento']})\n"
                             resultado += alerta_msg
                             print(alerta_msg)
