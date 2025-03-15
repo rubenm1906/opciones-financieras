@@ -15,7 +15,7 @@ MIN_VOLATILIDAD_IMPLÍCITA = 20  # Mínimo de volatilidad implícita en %
 MAX_VOLATILIDAD_IMPLÍCITA = 50  # Máximo de volatilidad implícita en %
 MIN_OPEN_INTEREST = 100  # Mínimo de interés abierto
 FILTRO_TIPO_OPCION = "OTM"  # Opciones: "OTM", "ITM", "TODAS"
-TOP_CONTRATOS = 5  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
+TOP_CONTRATOS = 10  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
 
 # Nuevos umbrales para alertas personalizadas (Idea 7)
 ALERTA_RENTABILIDAD_ANUAL = 50  # Rentabilidad anual mínima para alerta
