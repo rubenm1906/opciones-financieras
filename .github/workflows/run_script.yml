@@ -2,28 +2,102 @@ name: Ejecutar Script de Opciones
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # Ejecuta todos los días a medianoche (UTC)
-  workflow_dispatch:     # Permite ejecutarlo manualmente
+    - cron: '0 13 * * *'  # Ejecuta todos los días a las 13:00 UTC
+  workflow_dispatch:  # Permite ejecución manual
+    inputs:
+      tickers:
+        description: 'Tickers a analizar (separados por comas, ej: AAPL,MSFT,GOOGL)'
+        required: false
+        default: 'AAPL,MSFT,GOOGL,EPAM,TEP.PA'
+      min_rentabilidad_anual:
+        description: 'Mínima rentabilidad anual (%)'
+        required: false
+        default: '40'
+      max_dias_vencimiento:
+        description: 'Máximo días al vencimiento'
+        required: false
+        default: '90'
+      min_diferencia_porcentual:
+        description: 'Mínima diferencia porcentual (%)'
+        required: false
+        default: '5'
+      min_volumen:
+        description: 'Mínimo volumen'
+        required: false
+        default: '50'
+      min_volatilidad_implicita:
+        description: 'Mínima volatilidad implícita (%)'
+        required: false
+        default: '20'
+      max_volatilidad_implicita:
+        description: 'Máxima volatilidad implícita (%)'
+        required: false
+        default: '50'
+      min_open_interest:
+        description: 'Mínimo interés abierto'
+        required: false
+        default: '100'
+      filtro_tipo_opcion:
+        description: 'Filtro tipo opción (OTM, ITM, TODAS)'
+        required: false
+        default: 'OTM'
+      top_contratos:
+        description: 'Número de contratos a mostrar en "Mejores Contratos"'
+        required: false
+        default: '5'
+      alerta_rentabilidad_anual:
+        description: 'Rentabilidad anual mínima para alertas (%)'
+        required: false
+        default: '50'
+      alerta_max_volatilidad:
+        description: 'Volatilidad implícita máxima para alertas (%)'
+        required: false
+        default: '30'
 
 jobs:
-  build:
+  analizar-opciones:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      # Clonar el repositorio
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      # Configurar Python
+      - name: Configurar Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
-      - name: Install dependencies
+          python-version: '3.x'
+
+      # Instalar dependencias
+      - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
-          pip install yfinance tabulate pandas requests
-      - name: Run script
-        run: python analizar_opciones.py
-      - name: Upload results
+          pip install yfinance pandas tabulate requests
+
+      # Ejecutar el script con las configuraciones proporcionadas
+      - name: Ejecutar script de análisis de opciones
+        env:
+          TICKERS: ${{ github.event.inputs.tickers }}
+          MIN_RENTABILIDAD_ANUAL: ${{ github.event.inputs.min_rentabilidad_anual }}
+          MAX_DIAS_VENCIMIENTO: ${{ github.event.inputs.max_dias_vencimiento }}
+          MIN_DIFERENCIA_PORCENTUAL: ${{ github.event.inputs.min_diferencia_porcentual }}
+          MIN_VOLUMEN: ${{ github.event.inputs.min_volumen }}
+          MIN_VOLATILIDAD_IMPLÍCITA: ${{ github.event.inputs.min_volatilidad_implicita }}
+          MAX_VOLATILIDAD_IMPLÍCITA: ${{ github.event.inputs.max_volatilidad_implicita }}
+          MIN_OPEN_INTEREST: ${{ github.event.inputs.min_open_interest }}
+          FILTRO_TIPO_OPCION: ${{ github.event.inputs.filtro_tipo_opcion }}
+          TOP_CONTRATOS: ${{ github.event.inputs.top_contratos }}
+          ALERTA_RENTABILIDAD_ANUAL: ${{ github.event.inputs.alerta_rentabilidad_anual }}
+          ALERTA_MAX_VOLATILIDAD: ${{ github.event.inputs.alerta_max_volatilidad }}
+        run: |
+          python analizar_opciones.py
+
+      # Subir los resultados como artifact
+      - name: Subir resultados como artifact
         uses: actions/upload-artifact@v4
         with:
-          name: resultados
+          name: resultados-opciones
           path: |
             resultados.txt
             todas_las_opciones.csv
