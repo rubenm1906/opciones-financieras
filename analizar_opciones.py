@@ -18,13 +18,13 @@ DEFAULT_CONFIG = {
     "MIN_RENTABILIDAD_ANUAL": 45.0,
     "MAX_DIAS_VENCIMIENTO": 45,
     "MIN_DIFERENCIA_PORCENTUAL": 5.0,
-    "MIN_VOLUMEN": 1,
+    "MIN_VOLUMEN": 1,  # Hardcodeado
     "MIN_VOLATILIDAD_IMPLÍCITA": 35.0,  # Mínimo de volatilidad para filtros
-    "MIN_OPEN_INTEREST": 1,
+    "MIN_OPEN_INTEREST": 1,  # Hardcodeado
     "FILTRO_TIPO_OPCION": "OTM",
     "TOP_CONTRATOS": 10,
-    "ALERTA_RENTABILIDAD_ANUAL": 50.0,
-    "ALERTA_VOLATILIDAD_MINIMA": 50.0  # Mínimo de volatilidad para alertas
+    "ALERTA_RENTABILIDAD_ANUAL": 50.0,  # Hardcodeado
+    "ALERTA_VOLATILIDAD_MINIMA": 50.0   # Hardcodeado
 }
 
 def obtener_configuracion():
@@ -42,14 +42,14 @@ def obtener_configuracion():
     # MIN_DIFERENCIA_PORCENTUAL
     MIN_DIFERENCIA_PORCENTUAL = float(os.getenv("MIN_DIFERENCIA_PORCENTUAL", str(DEFAULT_CONFIG["MIN_DIFERENCIA_PORCENTUAL"])))
 
-    # MIN_VOLUMEN
-    MIN_VOLUMEN = int(os.getenv("MIN_VOLUMEN", str(DEFAULT_CONFIG["MIN_VOLUMEN"])))
+    # MIN_VOLUMEN (hardcodeado, no configurable desde variables de entorno)
+    MIN_VOLUMEN = DEFAULT_CONFIG["MIN_VOLUMEN"]
 
     # MIN_VOLATILIDAD_IMPLÍCITA
     MIN_VOLATILIDAD_IMPLÍCITA = float(os.getenv("MIN_VOLATILIDAD_IMPLÍCITA", str(DEFAULT_CONFIG["MIN_VOLATILIDAD_IMPLÍCITA"])))
 
-    # MIN_OPEN_INTEREST
-    MIN_OPEN_INTEREST = int(os.getenv("MIN_OPEN_INTEREST", str(DEFAULT_CONFIG["MIN_OPEN_INTEREST"])))
+    # MIN_OPEN_INTEREST (hardcodeado, no configurable desde variables de entorno)
+    MIN_OPEN_INTEREST = DEFAULT_CONFIG["MIN_OPEN_INTEREST"]
 
     # FILTRO_TIPO_OPCION
     FILTRO_TIPO_OPCION = os.getenv("FILTRO_TIPO_OPCION", DEFAULT_CONFIG["FILTRO_TIPO_OPCION"]).upper()
@@ -60,11 +60,11 @@ def obtener_configuracion():
     # TOP_CONTRATOS
     TOP_CONTRATOS = int(os.getenv("TOP_CONTRATOS", str(DEFAULT_CONFIG["TOP_CONTRATOS"])))
 
-    # ALERTA_RENTABILIDAD_ANUAL
-    ALERTA_RENTABILIDAD_ANUAL = float(os.getenv("ALERTA_RENTABILIDAD_ANUAL", str(DEFAULT_CONFIG["ALERTA_RENTABILIDAD_ANUAL"])))
+    # ALERTA_RENTABILIDAD_ANUAL (hardcodeado, no configurable desde variables de entorno)
+    ALERTA_RENTABILIDAD_ANUAL = DEFAULT_CONFIG["ALERTA_RENTABILIDAD_ANUAL"]
 
-    # ALERTA_VOLATILIDAD_MINIMA
-    ALERTA_VOLATILIDAD_MINIMA = float(os.getenv("ALERTA_VOLATILIDAD_MINIMA", str(DEFAULT_CONFIG["ALERTA_VOLATILIDAD_MINIMA"])))
+    # ALERTA_VOLATILIDAD_MINIMA (hardcodeado, no configurable desde variables de entorno)
+    ALERTA_VOLATILIDAD_MINIMA = DEFAULT_CONFIG["ALERTA_VOLATILIDAD_MINIMA"]
 
     return (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
             MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
@@ -313,7 +313,7 @@ def analizar_opciones():
 
                     for opcion in opciones_filtradas:
                         if (opcion['rentabilidad_anual'] >= ALERTA_RENTABILIDAD_ANUAL and 
-                            opcion['volatilidad_implícita'] >= ALERTA_VOLATILIDAD_MINIMA):  # Alerta con mínimo de 50.0%
+                            opcion['volatilidad_implícita'] >= ALERTA_VOLATILIDAD_MINIMA):  # Alerta con valores hardcodeados
                             alerta_msg = f"¡Oportunidad destacada! {ticker}: Rentabilidad anual: {opcion['rentabilidad_anual']:.2f}%, Volatilidad: {opcion['volatilidad_implícita']:.2f}% (Strike: ${opcion['strike']:.2f}, Vencimiento: {opcion['vencimiento']})\n"
                             resultado += alerta_msg
                             print(alerta_msg)
