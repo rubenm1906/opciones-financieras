@@ -8,7 +8,7 @@ on:
       tickers:
         description: 'Tickers a analizar (separados por comas, ej: AAPL,MSFT,GOOGL)'
         required: false
-        default: 'AAPL,MSFT,GOOGL,EPAM,TEP.PA'
+        default: 'NA9.DE,TEP.PA,GOOGL,EPAM,NFE,GLNG,GLOB,NVDA'
       min_rentabilidad_anual:
         description: 'Mínima rentabilidad anual (%)'
         required: false
