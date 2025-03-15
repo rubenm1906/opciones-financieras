@@ -28,11 +28,7 @@ on:
       min_volatilidad_implicita:
         description: 'Mínima volatilidad implícita (%)'
         required: false
-        default: '20'
-      max_volatilidad_implicita:
-        description: 'Máxima volatilidad implícita (%)'
-        required: false
-        default: '50'
+        default: '35'
       min_open_interest:
         description: 'Mínimo interés abierto'
         required: false
@@ -45,6 +41,14 @@ on:
         description: 'Número de contratos a mostrar en "Mejores Contratos"'
         required: false
         default: '10'
+      alerta_rentabilidad_anual:
+        description: 'Alerta mínima rentabilidad anual (%)'
+        required: false
+        default: '50'
+      alerta_volatilidad_minima:
+        description: 'Alerta mínima volatilidad implícita (%)'
+        required: false
+        default: '50'
 
 jobs:
   analizar-opciones:
@@ -76,12 +80,11 @@ jobs:
           MIN_DIFERENCIA_PORCENTUAL: ${{ github.event.inputs.min_diferencia_porcentual }}
           MIN_VOLUMEN: ${{ github.event.inputs.min_volumen }}
           MIN_VOLATILIDAD_IMPLÍCITA: ${{ github.event.inputs.min_volatilidad_implicita }}
-          MAX_VOLATILIDAD_IMPLÍCITA: ${{ github.event.inputs.max_volatilidad_implicita }}
           MIN_OPEN_INTEREST: ${{ github.event.inputs.min_open_interest }}
           FILTRO_TIPO_OPCION: ${{ github.event.inputs.filtro_tipo_opcion }}
           TOP_CONTRATOS: ${{ github.event.inputs.top_contratos }}
-          ALERTA_RENTABILIDAD_ANUAL: 50  # Valor por defecto hardcodeado (puede ajustarse en DEFAULT_CONFIG)
-          ALERTA_MAX_VOLATILIDAD: 30     # Valor por defecto hardcodeado (puede ajustarse en DEFAULT_CONFIG)
+          ALERTA_RENTABILIDAD_ANUAL: ${{ github.event.inputs.alerta_rentabilidad_anual }}
+          ALERTA_VOLATILIDAD_MINIMA: ${{ github.event.inputs.alerta_volatilidad_minima }}
         run: |
           python analizar_opciones.py
 
