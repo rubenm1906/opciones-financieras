@@ -2,21 +2,21 @@ name: Ejecutar Script de Opciones
 
 on:
   schedule:
-    - cron: '0 13 * * *'  # Ejecuta todos los días a las 13:00 UTC
+    - cron: '0 8,12,16,20 * * *'  # Ejecuta a las 9:00, 13:00, 17:00, 21:00 CET (UTC+1)
   workflow_dispatch:  # Permite ejecución manual
     inputs:
       tickers:
-        description: 'Tickers a analizar (separados por comas, ej: AAPL,MSFT,GOOGL)'
+        description: 'Tickers a analizar (separados por comas, ej: NA9.DE,TEP.PA,GOOGL)'
         required: false
         default: 'NA9.DE,TEP.PA,GOOGL,EPAM,NFE,GLNG,GLOB,NVDA'
       min_rentabilidad_anual:
         description: 'Mínima rentabilidad anual (%)'
         required: false
-        default: '40'
+        default: '45'
       max_dias_vencimiento:
         description: 'Máximo días al vencimiento'
         required: false
-        default: '60'
+        default: '45'
       min_diferencia_porcentual:
         description: 'Mínima diferencia porcentual (%)'
         required: false
@@ -28,7 +28,7 @@ on:
       min_volatilidad_implicita:
         description: 'Mínima volatilidad implícita (%)'
         required: false
-        default: '30'
+        default: '20'
       max_volatilidad_implicita:
         description: 'Máxima volatilidad implícita (%)'
         required: false
@@ -80,8 +80,8 @@ jobs:
           MIN_OPEN_INTEREST: ${{ github.event.inputs.min_open_interest }}
           FILTRO_TIPO_OPCION: ${{ github.event.inputs.filtro_tipo_opcion }}
           TOP_CONTRATOS: ${{ github.event.inputs.top_contratos }}
-          ALERTA_RENTABILIDAD_ANUAL: 50  # Valor por defecto hardcodeado
-          ALERTA_MAX_VOLATILIDAD: 30     # Valor por defecto hardcodeado
+          ALERTA_RENTABILIDAD_ANUAL: 50  # Valor por defecto hardcodeado (puede ajustarse en DEFAULT_CONFIG)
+          ALERTA_MAX_VOLATILIDAD: 30     # Valor por defecto hardcodeado (puede ajustarse en DEFAULT_CONFIG)
         run: |
           python analizar_opciones.py
 
