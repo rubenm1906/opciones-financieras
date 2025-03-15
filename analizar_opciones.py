@@ -4,6 +4,7 @@ import os
 from tabulate import tabulate
 import pandas as pd  # Para exportar a CSV
 import requests  # Para enviar notificaciones a Discord
+import time  # Para agregar retrasos entre solicitudes
 
 # Configuración
 TICKERS = list(set(["NA9.DE" ,"TEP.PA" ,"GOOGL" ,"EPAM" ,"NFE" ,"GLNG","GLOB" ,"NVDA" ]))  # Aseguramos que no haya duplicados
@@ -71,7 +72,7 @@ def calcular_diferencia_porcentual(precio_subyacente, break_even):
     return ((precio_subyacente - break_even) / precio_subyacente) * 100
 
 def enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto):
-    """Envía notificaciones a Discord dividiendo los contratos en grupos de 5."""
+    """Envía notificaciones a Discord dividiendo los contratos en grupos de 5 con retraso."""
     # Definir las columnas que se mostrarán en Discord
     headers_resumen = ["Ticker", "Strike", "Precio PUT", "Días al Venc.", "Rent. Diaria", "Rent. Anual", "Volatilidad", "Vencimiento"]
 
@@ -116,6 +117,11 @@ def enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto):
             print(f"Error al enviar notificación a Discord para contratos {inicio}-{fin}: {e}")
             if response.text:
                 print(f"Detalles del error: {response.text}")
+            # Si hay un error, no continuamos intentando enviar más mensajes para evitar más bloqueos
+            break
+
+        # Agregar un retraso de 1 segundo entre solicitudes para evitar límites de tasa
+        time.sleep(1)
 
 def analizar_opciones(tickers):
     global SCRIPT_EJECUTADO
