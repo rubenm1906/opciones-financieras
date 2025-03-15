@@ -3,9 +3,7 @@ from datetime import datetime
 import os
 from tabulate import tabulate
 import pandas as pd  # Para exportar a CSV
-import smtplib  # Para enviar correos
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import requests  # Para enviar notificaciones a Discord
 
 # Configuración
 TICKERS = list(set(["AAPL", "MSFT", "GOOGL", "EPAM", "TEP.PA"]))  # Aseguramos que no haya duplicados
@@ -23,12 +21,8 @@ TOP_CONTRATOS = 5  # Número de contratos a mostrar en la tabla de "Mejores Cont
 ALERTA_RENTABILIDAD_ANUAL = 50  # Rentabilidad anual mínima para alerta
 ALERTA_MAX_VOLATILIDAD = 30  # Volatilidad implícita máxima para alerta
 
-# Configuración para el correo electrónico (Idea 2)
-EMAIL_SENDER = "tu_correo@gmail.com"  # Reemplaza con tu correo
-EMAIL_PASSWORD = "tu_contraseña_app"  # Reemplaza con tu contraseña de aplicación
-EMAIL_RECEIVER = "destinatario@ejemplo.com"  # Reemplaza con el correo del destinatario
-SMTP_SERVER = "smtp.gmail.com"
-SMTP_PORT = 587
+# Configuración para Discord (Idea 2)
+DISCORD_WEBHOOK_URL = "TU_WEBHOOK_URL_AQUI"  # Reemplaza con el URL de tu webhook de Discord
 
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
@@ -76,24 +70,19 @@ def calcular_diferencia_porcentual(precio_subyacente, break_even):
     """Calcula la diferencia porcentual entre el subyacente y el break-even."""
     return ((precio_subyacente - break_even) / precio_subyacente) * 100
 
-def enviar_correo(asunto, cuerpo):
-    """Envía un correo electrónico con los resultados."""
-    msg = MIMEMultipart()
-    msg['From'] = EMAIL_SENDER
-    msg['To'] = EMAIL_RECEIVER
-    msg['Subject'] = asunto
-
-    msg.attach(MIMEText(cuerpo, 'plain'))
-
+def enviar_notificacion_discord(tabla, tipo_opcion_texto):
+    """Envía una notificación a Discord con los mejores contratos."""
+    payload = {
+        "content": f"Se encontraron opciones que cumplen los filtros.\n\n"
+                   f"Mejores {TOP_CONTRATOS} Contratos {tipo_opcion_texto}:\n\n"
+                   f"```plaintext\n{tabla}\n```"
+    }
     try:
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
-        server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-        server.sendmail(EMAIL_SENDER, EMAIL_RECEIVER, msg.as_string())
-        server.quit()
-        print("Correo enviado exitosamente.")
+        response = requests.post(DISCORD_WEBHOOK_URL, json=payload)
+        response.raise_for_status()
+        print("Notificación enviada a Discord exitosamente.")
     except Exception as e:
-        print(f"Error al enviar el correo: {e}")
+        print(f"Error al enviar notificación a Discord: {e}")
 
 def analizar_opciones(tickers):
     global SCRIPT_EJECUTADO
@@ -342,11 +331,8 @@ def analizar_opciones(tickers):
             df_mejores.to_csv("mejores_contratos.csv", index=False)
             print("Mejores contratos exportados a 'mejores_contratos.csv'.")
 
-            # Enviar notificación por correo (Idea 2)
-            asunto = f"Mejores {TOP_CONTRATOS} Contratos de Opciones - {datetime.now().strftime('%Y-%m-%d')}"
-            cuerpo = f"Se encontraron {len(todas_las_opciones)} opciones que cumplen los filtros.\n\n"
-            cuerpo += f"Mejores {TOP_CONTRATOS} Contratos {tipo_opcion_texto}:\n\n{tabla}"
-            enviar_correo(asunto, cuerpo)
+            # Enviar notificación a Discord (Idea 2)
+            enviar_notificacion_discord(tabla, tipo_opcion_texto)
 
         else:
             resultado += f"\nNo se encontraron opciones que cumplan los filtros en ningún ticker.\n"
