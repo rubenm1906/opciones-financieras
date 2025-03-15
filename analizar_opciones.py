@@ -2,18 +2,33 @@ import yfinance as yf
 from datetime import datetime
 import os
 from tabulate import tabulate
+import pandas as pd  # Para exportar a CSV
+import smtplib  # Para enviar correos
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Configuración
-TICKERS = list(set(["TEP.PA", "GLNG", "GOOGL", "EPAM", "NA9.DE", "NVDA", "NFE"]))  # Aseguramos que no haya duplicados
-MIN_RENTABILIDAD_ANUAL = 25
-MAX_DIAS_VENCIMIENTO = 60  # Filtro máximo de 90 días
+TICKERS = list(set(["AAPL", "MSFT", "GOOGL", "EPAM", "TEP.PA"]))  # Aseguramos que no haya duplicados
+MIN_RENTABILIDAD_ANUAL = 40
+MAX_DIAS_VENCIMIENTO = 90  # Filtro máximo de 90 días
 MIN_DIFERENCIA_PORCENTUAL = 5  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
-MIN_VOLUMEN = 1  # Filtro mínimo de volumen
+MIN_VOLUMEN = 50  # Filtro mínimo de volumen
 MIN_VOLATILIDAD_IMPLÍCITA = 20  # Mínimo de volatilidad implícita en %
 MAX_VOLATILIDAD_IMPLÍCITA = 50  # Máximo de volatilidad implícita en %
-MIN_OPEN_INTEREST = 20  # Mínimo de interés abierto
+MIN_OPEN_INTEREST = 100  # Mínimo de interés abierto
 FILTRO_TIPO_OPCION = "OTM"  # Opciones: "OTM", "ITM", "TODAS"
-TOP_CONTRATOS = 10  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
+TOP_CONTRATOS = 5  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
+
+# Nuevos umbrales para alertas personalizadas (Idea 7)
+ALERTA_RENTABILIDAD_ANUAL = 50  # Rentabilidad anual mínima para alerta
+ALERTA_MAX_VOLATILIDAD = 30  # Volatilidad implícita máxima para alerta
+
+# Configuración para el correo electrónico (Idea 2)
+EMAIL_SENDER = "tu_correo@gmail.com"  # Reemplaza con tu correo
+EMAIL_PASSWORD = "tu_contraseña_app"  # Reemplaza con tu contraseña de aplicación
+EMAIL_RECEIVER = "destinatario@ejemplo.com"  # Reemplaza con el correo del destinatario
+SMTP_SERVER = "smtp.gmail.com"
+SMTP_PORT = 587
 
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
@@ -61,6 +76,25 @@ def calcular_diferencia_porcentual(precio_subyacente, break_even):
     """Calcula la diferencia porcentual entre el subyacente y el break-even."""
     return ((precio_subyacente - break_even) / precio_subyacente) * 100
 
+def enviar_correo(asunto, cuerpo):
+    """Envía un correo electrónico con los resultados."""
+    msg = MIMEMultipart()
+    msg['From'] = EMAIL_SENDER
+    msg['To'] = EMAIL_RECEIVER
+    msg['Subject'] = asunto
+
+    msg.attach(MIMEText(cuerpo, 'plain'))
+
+    try:
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(EMAIL_SENDER, EMAIL_PASSWORD)
+        server.sendmail(EMAIL_SENDER, EMAIL_RECEIVER, msg.as_string())
+        server.quit()
+        print("Correo enviado exitosamente.")
+    except Exception as e:
+        print(f"Error al enviar el correo: {e}")
+
 def analizar_opciones(tickers):
     global SCRIPT_EJECUTADO
     if SCRIPT_EJECUTADO:
@@ -70,6 +104,7 @@ def analizar_opciones(tickers):
 
     resultado = ""
     todas_las_opciones = []  # Lista para almacenar todas las opciones filtradas de todos los tickers
+    todas_las_opciones_df = []  # Lista para exportar a CSV
 
     try:
         print(f"Analizando {len(tickers)} tickers: {tickers}")
@@ -108,7 +143,6 @@ def analizar_opciones(tickers):
                     elif FILTRO_TIPO_OPCION == "ITM":
                         if strike < precio_subyacente:  # Descarta OTM (ATM se considera ITM)
                             continue
-                    # Si FILTRO_TIPO_OPCION es "TODAS", no aplicamos este filtro
 
                     # Otros filtros
                     if dias_vencimiento <= 0 or dias_vencimiento > MAX_DIAS_VENCIMIENTO:
@@ -143,12 +177,28 @@ def analizar_opciones(tickers):
                         opciones_filtradas.append(opcion)
                         todas_las_opciones.append(opcion)
 
+                        # Preparar datos para CSV
+                        todas_las_opciones_df.append([
+                            ticker,
+                            f"${strike:.2f}",
+                            f"${precio_put:.2f}",
+                            vencimiento_str,
+                            dias_vencimiento,
+                            f"{rent_diaria:.2f}%",
+                            f"{rent_anual:.2f}%",
+                            f"${break_even:.2f}",
+                            f"{diferencia_porcentual:.2f}%",
+                            f"{volatilidad_implícita:.2f}%",
+                            volumen,
+                            open_interest
+                        ])
+
                 if opciones_filtradas:
                     tipo_opcion_texto = "Out of the Money" if FILTRO_TIPO_OPCION == "OTM" else "In the Money" if FILTRO_TIPO_OPCION == "ITM" else "Todas"
                     resultado += f"\nOpciones PUT {tipo_opcion_texto} con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}, volatilidad entre {MIN_VOLATILIDAD_IMPLÍCITA}% y {MAX_VOLATILIDAD_IMPLÍCITA}%, interés abierto > {MIN_OPEN_INTEREST}):\n"
                     print(f"Se encontraron {len(opciones_filtradas)} opciones que cumplen los filtros para {ticker}")
                     
-                    # Crear una tabla con los datos para este ticker
+                    # Crear tabla para mostrar en consola y guardar en resultado
                     tabla_datos = []
                     for opcion in opciones_filtradas:
                         tabla_datos.append([
@@ -182,6 +232,15 @@ def analizar_opciones(tickers):
                     tabla = tabulate(tabla_datos, headers=headers, tablefmt="grid")
                     resultado += f"\n{tabla}\n"
                     print(tabla)
+
+                    # Verificar umbrales para alertas (Idea 7)
+                    for opcion in opciones_filtradas:
+                        if (opcion['rentabilidad_anual'] >= ALERTA_RENTABILIDAD_ANUAL and 
+                            opcion['volatilidad_implícita'] <= ALERTA_MAX_VOLATILIDAD):
+                            alerta_msg = f"¡Oportunidad destacada! {ticker}: Rentabilidad anual: {opcion['rentabilidad_anual']:.2f}%, Volatilidad: {opcion['volatilidad_implícita']:.2f}% (Strike: ${opcion['strike']:.2f}, Vencimiento: {opcion['vencimiento']})\n"
+                            resultado += alerta_msg
+                            print(alerta_msg)
+
                 else:
                     resultado += "\nNo se consiguieron resultados para este ticker.\n"
                     print("No se consiguieron resultados para este ticker.")
@@ -192,8 +251,29 @@ def analizar_opciones(tickers):
                 print(error_msg)
                 continue
 
+        # Exportar todas las opciones a CSV (Idea 1)
+        if todas_las_opciones_df:
+            headers_csv = [
+                "Ticker",
+                "Strike",
+                "Precio PUT",
+                "Vencimiento",
+                "Días Venc.",
+                "Rent. Diaria",
+                "Rent. Anual",
+                "Break-even",
+                "Dif. % (Suby.-Break.)",
+                "Volatilidad Implícita",
+                "Volumen",
+                "Interés Abierto"
+            ]
+            df_todas = pd.DataFrame(todas_las_opciones_df, columns=headers_csv)
+            df_todas.to_csv("todas_las_opciones.csv", index=False)
+            print("Todas las opciones exportadas a 'todas_las_opciones.csv'.")
+
         # Tabla adicional: Mejores contratos
         print(f"Total de opciones filtradas (todos los tickers): {len(todas_las_opciones)}")
+        mejores_opciones_df = []  # Lista para exportar Mejores Contratos a CSV
         if todas_las_opciones:
             # Ordenar por mayor rentabilidad anual, menor tiempo de vencimiento, y mayor diferencia porcentual
             mejores_opciones = sorted(
@@ -208,6 +288,22 @@ def analizar_opciones(tickers):
             tabla_mejores = []
             for opcion in mejores_opciones:
                 tabla_mejores.append([
+                    opcion['ticker'],
+                    f"${opcion['strike']:.2f}",
+                    f"${opcion['precio_put']:.2f}",
+                    opcion['vencimiento'],
+                    opcion['dias_vencimiento'],
+                    f"{opcion['rentabilidad_diaria']:.2f}%",
+                    f"{opcion['rentabilidad_anual']:.2f}%",
+                    f"${opcion['break_even']:.2f}",
+                    f"{opcion['diferencia_porcentual']:.2f}%",
+                    f"{opcion['volatilidad_implícita']:.2f}%",
+                    opcion['volumen'],
+                    opcion['open_interest']
+                ])
+
+                # Preparar datos para CSV
+                mejores_opciones_df.append([
                     opcion['ticker'],
                     f"${opcion['strike']:.2f}",
                     f"${opcion['precio_put']:.2f}",
@@ -240,11 +336,23 @@ def analizar_opciones(tickers):
             tabla = tabulate(tabla_mejores, headers=headers_mejores, tablefmt="grid")
             resultado += f"\n{tabla}\n"
             print(tabla)
+
+            # Exportar Mejores Contratos a CSV (Idea 1)
+            df_mejores = pd.DataFrame(mejores_opciones_df, columns=headers_mejores)
+            df_mejores.to_csv("mejores_contratos.csv", index=False)
+            print("Mejores contratos exportados a 'mejores_contratos.csv'.")
+
+            # Enviar notificación por correo (Idea 2)
+            asunto = f"Mejores {TOP_CONTRATOS} Contratos de Opciones - {datetime.now().strftime('%Y-%m-%d')}"
+            cuerpo = f"Se encontraron {len(todas_las_opciones)} opciones que cumplen los filtros.\n\n"
+            cuerpo += f"Mejores {TOP_CONTRATOS} Contratos {tipo_opcion_texto}:\n\n{tabla}"
+            enviar_correo(asunto, cuerpo)
+
         else:
             resultado += f"\nNo se encontraron opciones que cumplan los filtros en ningún ticker.\n"
             print("No se encontraron opciones que cumplan los filtros en ningún ticker.")
 
-        # Guardar resultados en un archivo
+        # Guardar resultados en un archivo de texto
         with open("resultados.txt", "w") as f:
             f.write(resultado)
 
