@@ -22,7 +22,7 @@ ALERTA_RENTABILIDAD_ANUAL = 50  # Rentabilidad anual mínima para alerta
 ALERTA_MAX_VOLATILIDAD = 30  # Volatilidad implícita máxima para alerta
 
 # Configuración para Discord (Idea 2)
-DISCORD_WEBHOOK_URL = "TU_WEBHOOK_URL_AQUI"  # Reemplaza con el URL de tu webhook de Discord
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1350463523196768356/ePmWnO2XWnfD582oMAr2WzqSFs7ZxU1ApRYi1bz8PiSbZE5zAcR7ZoOD8SPVofxA9UUW"  # Reemplaza con el URL de tu webhook de Discord
 
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
