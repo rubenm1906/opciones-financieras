@@ -5,10 +5,10 @@ from tabulate import tabulate
 
 # Configuración
 TICKERS = list(set(["TEP.PA", "GLNG", "GOOGL", "EPAM", "NA9.DE", "NVDA"]))  # Aseguramos que no haya duplicados
-MIN_RENTABILIDAD_ANUAL = 30
-MAX_DIAS_VENCIMIENTO = 30  # Filtro máximo de 90 días
+MIN_RENTABILIDAD_ANUAL = 25
+MAX_DIAS_VENCIMIENTO = 60  # Filtro máximo de 90 días
 MIN_DIFERENCIA_PORCENTUAL = 5  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
-MIN_VOLUMEN = 10  # Filtro mínimo de volumen
+MIN_VOLUMEN = 1  # Filtro mínimo de volumen
 MIN_VOLATILIDAD_IMPLÍCITA = 20  # Mínimo de volatilidad implícita en %
 MAX_VOLATILIDAD_IMPLÍCITA = 50  # Máximo de volatilidad implícita en %
 MIN_OPEN_INTEREST = 20  # Mínimo de interés abierto
