@@ -6,16 +6,16 @@ import pandas as pd  # Para exportar a CSV
 import requests  # Para enviar notificaciones a Discord
 
 # Configuración
-TICKERS = list(set(["NA9.DE" ,"TEP.PA","GOOGL" ,"EPAM" ,"NFE" ,"GLNG" ,"GLOB" ,"NVDA" ]))  # Aseguramos que no haya duplicados
-MIN_RENTABILIDAD_ANUAL = 30
-MAX_DIAS_VENCIMIENTO = 60  # Filtro máximo de 90 días
-MIN_DIFERENCIA_PORCENTUAL = 7  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
-MIN_VOLUMEN = 10  # Filtro mínimo de volumen
-MIN_VOLATILIDAD_IMPLÍCITA = 25  # Mínimo de volatilidad implícita en %
-MAX_VOLATILIDAD_IMPLÍCITA = 60  # Máximo de volatilidad implícita en %
-MIN_OPEN_INTEREST = 1  # Mínimo de interés abierto
+TICKERS = list(set(["AAPL", "MSFT", "GOOGL", "EPAM", "TEP.PA"]))  # Aseguramos que no haya duplicados
+MIN_RENTABILIDAD_ANUAL = 40
+MAX_DIAS_VENCIMIENTO = 90  # Filtro máximo de 90 días
+MIN_DIFERENCIA_PORCENTUAL = 5  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
+MIN_VOLUMEN = 50  # Filtro mínimo de volumen
+MIN_VOLATILIDAD_IMPLÍCITA = 20  # Mínimo de volatilidad implícita en %
+MAX_VOLATILIDAD_IMPLÍCITA = 50  # Máximo de volatilidad implícita en %
+MIN_OPEN_INTEREST = 100  # Mínimo de interés abierto
 FILTRO_TIPO_OPCION = "OTM"  # Opciones: "OTM", "ITM", "TODAS"
-TOP_CONTRATOS = 10  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
+TOP_CONTRATOS = 5  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
 
 # Nuevos umbrales para alertas personalizadas (Idea 7)
 ALERTA_RENTABILIDAD_ANUAL = 50  # Rentabilidad anual mínima para alerta
@@ -72,14 +72,18 @@ def calcular_diferencia_porcentual(precio_subyacente, break_even):
 
 def enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto):
     """Envía una notificación a Discord con un resumen de los mejores contratos."""
-    # Crear un mensaje simplificado con menos columnas para evitar exceder el límite de caracteres
+    # Crear un mensaje con las columnas solicitadas
     tabla_resumen = []
-    headers_resumen = ["Ticker", "Strike", "Rent. Anual", "Vencimiento"]
+    headers_resumen = ["Ticker", "Strike", "Precio PUT", "Días al Venc.", "Rent. Diaria", "Rent. Anual", "Volatilidad", "Vencimiento"]
     for opcion in mejores_opciones:
         tabla_resumen.append([
             opcion['ticker'],
             f"${opcion['strike']:.2f}",
+            f"${opcion['precio_put']:.2f}",
+            opcion['dias_vencimiento'],
+            f"{opcion['rentabilidad_diaria']:.2f}%",
             f"{opcion['rentabilidad_anual']:.2f}%",
+            f"{opcion['volatilidad_implícita']:.2f}%",
             opcion['vencimiento']
         ])
     
@@ -111,7 +115,21 @@ def analizar_opciones(tickers):
         return
     SCRIPT_EJECUTADO = True
 
-    resultado = ""
+    # Resumen de condiciones para el archivo .txt
+    resumen_condiciones = (
+        f"Resumen de condiciones de ejecución - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}:\n"
+        f"Tickers analizados: {', '.join(tickers)}\n"
+        f"Filtro tipo opción: {FILTRO_TIPO_OPCION}\n"
+        f"Mínima rentabilidad anual: {MIN_RENTABILIDAD_ANUAL}%\n"
+        f"Máximo días al vencimiento: {MAX_DIAS_VENCIMIENTO}\n"
+        f"Mínima diferencia porcentual: {MIN_DIFERENCIA_PORCENTUAL}%\n"
+        f"Mínimo volumen: {MIN_VOLUMEN}\n"
+        f"Volatilidad implícita (mínima-máxima): {MIN_VOLATILIDAD_IMPLÍCITA}% - {MAX_VOLATILIDAD_IMPLÍCITA}%\n"
+        f"Mínimo interés abierto: {MIN_OPEN_INTEREST}\n"
+        f"{'='*50}\n\n"
+    )
+
+    resultado = resumen_condiciones  # Agregar resumen al inicio del resultado
     todas_las_opciones = []  # Lista para almacenar todas las opciones filtradas de todos los tickers
     todas_las_opciones_df = []  # Lista para exportar a CSV
 
