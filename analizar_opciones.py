@@ -4,7 +4,7 @@ import os
 from tabulate import tabulate
 
 # Configuración
-TICKERS = list(set(["TEP.PA", "GLNG", "GOOGL", "EPAM", "NA9.DE", "NVDA"]))  # Aseguramos que no haya duplicados
+TICKERS = list(set(["TEP.PA", "GLNG", "GOOGL", "EPAM", "NA9.DE", "NVDA", "NFE"]))  # Aseguramos que no haya duplicados
 MIN_RENTABILIDAD_ANUAL = 25
 MAX_DIAS_VENCIMIENTO = 60  # Filtro máximo de 90 días
 MIN_DIFERENCIA_PORCENTUAL = 5  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
