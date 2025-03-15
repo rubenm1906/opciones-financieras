@@ -6,20 +6,20 @@ import pandas as pd  # Para exportar a CSV
 import requests  # Para enviar notificaciones a Discord
 
 # Configuración
-TICKERS = list(set(["AAPL", "MSFT", "GOOGL", "EPAM", "TEP.PA"]))  # Aseguramos que no haya duplicados
-MIN_RENTABILIDAD_ANUAL = 40
-MAX_DIAS_VENCIMIENTO = 90  # Filtro máximo de 90 días
+TICKERS = list(set(["NA9.DE", "TEP.PA","GOOGL" ,"EPAM" ,"NFE" ,"GLNG" ,"GLOB" ,"NVDA"]))  
+MIN_RENTABILIDAD_ANUAL = 30
+MAX_DIAS_VENCIMIENTO = 30  # Filtro máximo de 90 días
 MIN_DIFERENCIA_PORCENTUAL = 5  # Filtro mínimo para la diferencia % (Subyacente - Break-even)
 MIN_VOLUMEN = 50  # Filtro mínimo de volumen
 MIN_VOLATILIDAD_IMPLÍCITA = 20  # Mínimo de volatilidad implícita en %
 MAX_VOLATILIDAD_IMPLÍCITA = 50  # Máximo de volatilidad implícita en %
-MIN_OPEN_INTEREST = 100  # Mínimo de interés abierto
+MIN_OPEN_INTEREST = 10  # Mínimo de interés abierto
 FILTRO_TIPO_OPCION = "OTM"  # Opciones: "OTM", "ITM", "TODAS"
-TOP_CONTRATOS = 5  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
+TOP_CONTRATOS = 10  # Número de contratos a mostrar en la tabla de "Mejores Contratos"
 
 # Nuevos umbrales para alertas personalizadas (Idea 7)
 ALERTA_RENTABILIDAD_ANUAL = 50  # Rentabilidad anual mínima para alerta
-ALERTA_MAX_VOLATILIDAD = 30  # Volatilidad implícita máxima para alerta
+ALERTA_MAX_VOLATILIDAD = 50  # Volatilidad implícita máxima para alerta
 
 # Configuración para Discord (Idea 2)
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1350463523196768356/ePmWnO2XWnfD582oMAr2WzqSFs7ZxU1ApRYi1bz8PiSbZE5zAcR7ZoOD8SPVofxA9UUW"  # Reemplaza con el URL de tu webhook de Discord
