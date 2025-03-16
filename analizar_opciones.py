@@ -120,30 +120,18 @@ def calcular_diferencia_porcentual(precio_subyacente, break_even):
 
 def enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto, top_contratos):
     """Envía notificaciones a Discord dividiendo los contratos en grupos de 5 con retraso."""
-    headers_resumen = ["Ticker", "Strike", "Precio PUT", "Días al Venc.", "Rent. Diaria", "Rent. Anual", "Volatilidad", "Vencimiento"]
     grupo_tamano = 5
     for i in range(0, len(mejores_opciones), grupo_tamano):
         grupo_opciones = mejores_opciones[i:i + grupo_tamano]
         inicio = i + 1
         fin = min(i + grupo_tamano, len(mejores_opciones))
         
-        tabla_resumen = []
+        mensaje = f"Se encontraron opciones que cumplen los filtros.\n\nMejores {top_contratos} Contratos {tipo_opcion_texto} - Contratos {inicio}-{fin}:\n"
         for opcion in grupo_opciones:
-            tabla_resumen.append([
-                opcion['ticker'],
-                f"${opcion['strike']:.2f}",
-                f"${opcion['precio_put']:.2f}",
-                opcion['dias_vencimiento'],
-                f"{opcion['rentabilidad_diaria']:.2f}%",
-                f"{opcion['rentabilidad_anual']:.2f}%",
-                f"{opcion['volatilidad_implícita']:.2f}%",
-                opcion['vencimiento']
-            ])
-        
-        tabla = tabulate(tabla_resumen, headers=headers_resumen, tablefmt="grid")
-        mensaje = (f"Se encontraron opciones que cumplen los filtros.\n\n"
-                   f"Mejores {top_contratos} Contratos {tipo_opcion_texto} - Contratos {inicio}-{fin}:\n\n"
-                   f"```plaintext\n{tabla}\n```")
+            mensaje += (f"- {opcion['ticker']} | Strike: ${opcion['strike']:.2f} | "
+                       f"Rent. Anual: {opcion['rentabilidad_anual']:.2f}% | "
+                       f"Volatilidad: {opcion['volatilidad_implícita']:.2f}%\n")
+        mensaje += "\nPara detalles completos, revisa los archivos CSV en el repositorio."
 
         if len(mensaje) > 2000:
             mensaje = (f"Se encontraron opciones que cumplen los filtros.\n\n"
