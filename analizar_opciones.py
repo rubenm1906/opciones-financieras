@@ -34,19 +34,23 @@ def obtener_configuracion():
     TICKERS = list(set(TICKERS.split(",")))  # Convertir a lista y eliminar duplicados
 
     # MIN_RENTABILIDAD_ANUAL
-    MIN_RENTABILIDAD_ANUAL = float(os.getenv("MIN_RENTABILIDAD_ANUAL", str(DEFAULT_CONFIG["MIN_RENTABILIDAD_ANUAL"])))
+    min_rentabilidad_env = os.getenv("MIN_RENTABILIDAD_ANUAL", str(DEFAULT_CONFIG["MIN_RENTABILIDAD_ANUAL"]))
+    MIN_RENTABILIDAD_ANUAL = float(min_rentabilidad_env) if min_rentabilidad_env else DEFAULT_CONFIG["MIN_RENTABILIDAD_ANUAL"]
 
     # MAX_DIAS_VENCIMIENTO
-    MAX_DIAS_VENCIMIENTO = int(os.getenv("MAX_DIAS_VENCIMIENTO", str(DEFAULT_CONFIG["MAX_DIAS_VENCIMIENTO"])))
+    max_dias_env = os.getenv("MAX_DIAS_VENCIMIENTO", str(DEFAULT_CONFIG["MAX_DIAS_VENCIMIENTO"]))
+    MAX_DIAS_VENCIMIENTO = int(max_dias_env) if max_dias_env else DEFAULT_CONFIG["MAX_DIAS_VENCIMIENTO"]
 
     # MIN_DIFERENCIA_PORCENTUAL
-    MIN_DIFERENCIA_PORCENTUAL = float(os.getenv("MIN_DIFERENCIA_PORCENTUAL", str(DEFAULT_CONFIG["MIN_DIFERENCIA_PORCENTUAL"])))
+    min_dif_env = os.getenv("MIN_DIFERENCIA_PORCENTUAL", str(DEFAULT_CONFIG["MIN_DIFERENCIA_PORCENTUAL"]))
+    MIN_DIFERENCIA_PORCENTUAL = float(min_dif_env) if min_dif_env else DEFAULT_CONFIG["MIN_DIFERENCIA_PORCENTUAL"]
 
     # MIN_VOLUMEN (hardcodeado, no configurable desde variables de entorno)
     MIN_VOLUMEN = DEFAULT_CONFIG["MIN_VOLUMEN"]
 
     # MIN_VOLATILIDAD_IMPLÍCITA
-    MIN_VOLATILIDAD_IMPLÍCITA = float(os.getenv("MIN_VOLATILIDAD_IMPLÍCITA", str(DEFAULT_CONFIG["MIN_VOLATILIDAD_IMPLÍCITA"])))
+    min_vol_env = os.getenv("MIN_VOLATILIDAD_IMPLÍCITA", str(DEFAULT_CONFIG["MIN_VOLATILIDAD_IMPLÍCITA"]))
+    MIN_VOLATILIDAD_IMPLÍCITA = float(min_vol_env) if min_vol_env else DEFAULT_CONFIG["MIN_VOLATILIDAD_IMPLÍCITA"]
 
     # MIN_OPEN_INTEREST (hardcodeado, no configurable desde variables de entorno)
     MIN_OPEN_INTEREST = DEFAULT_CONFIG["MIN_OPEN_INTEREST"]
@@ -58,7 +62,8 @@ def obtener_configuracion():
         FILTRO_TIPO_OPCION = DEFAULT_CONFIG["FILTRO_TIPO_OPCION"]
 
     # TOP_CONTRATOS
-    TOP_CONTRATOS = int(os.getenv("TOP_CONTRATOS", str(DEFAULT_CONFIG["TOP_CONTRATOS"])))
+    top_contratos_env = os.getenv("TOP_CONTRATOS", str(DEFAULT_CONFIG["TOP_CONTRATOS"]))
+    TOP_CONTRATOS = int(top_contratos_env) if top_contratos_env else DEFAULT_CONFIG["TOP_CONTRATOS"]
 
     # ALERTA_RENTABILIDAD_ANUAL (hardcodeado, no configurable desde variables de entorno)
     ALERTA_RENTABILIDAD_ANUAL = DEFAULT_CONFIG["ALERTA_RENTABILIDAD_ANUAL"]
