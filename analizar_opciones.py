@@ -3,7 +3,7 @@ from datetime import datetime
 import os
 from tabulate import tabulate
 import pandas as pd  # Para exportar a CSV
-import requests  # Para enviar notificaciones a Discord
+import requests  # Para enviar notificaciones a Discord y solicitudes a Finnhub
 import time  # Para agregar retrasos entre solicitudes
 
 # Configuración para Discord (Idea 2)
@@ -26,6 +26,9 @@ DEFAULT_CONFIG = {
     "ALERTA_RENTABILIDAD_ANUAL": 50.0,  # Hardcodeado
     "ALERTA_VOLATILIDAD_MINIMA": 50.0   # Hardcodeado
 }
+
+# Clave API de Finnhub
+FINNHUB_API_KEY = "cvbfudhr01qob7udcs1gcvbfudhr01qob7udcs20"
 
 def obtener_configuracion():
     """Obtiene la configuración desde variables de entorno con valores por defecto del script."""
@@ -85,23 +88,103 @@ def obtener_datos_subyacente(ticker):
         raise ValueError(f"No se encontraron datos válidos para el subyacente {ticker}")
     return stock, precio, minimo_52_semanas, maximo_52_semanas
 
-def obtener_opciones_put(stock):
-    """Obtiene las opciones PUT del ticker, incluyendo interés abierto."""
-    fechas_vencimiento = stock.options
-    opciones_put = []
-    for fecha in fechas_vencimiento:
-        opcion = stock.option_chain(fecha)
-        puts = opcion.puts
-        for _, put in puts.iterrows():
-            opciones_put.append({
-                "strike": put["strike"],
-                "lastPrice": put["lastPrice"],
-                "expirationDate": fecha,
-                "volume": put.get("volume", 0),
-                "impliedVolatility": put.get("impliedVolatility", 0),
-                "openInterest": put.get("openInterest", 0)
-            })
-    return opciones_put
+def obtener_opciones_yahoo(stock):
+    """Obtiene las opciones PUT desde Yahoo Finance."""
+    try:
+        fechas_vencimiento = stock.options
+        opciones_put = []
+        for fecha in fechas_vencimiento:
+            opcion = stock.option_chain(fecha)
+            puts = opcion.puts
+            for _, put in puts.iterrows():
+                opciones_put.append({
+                    "strike": float(put["strike"]),
+                    "lastPrice": float(put["lastPrice"]),
+                    "expirationDate": fecha,
+                    "volume": put.get("volume", 0) or 0,
+                    "impliedVolatility": (put.get("impliedVolatility", 0) or 0) * 100,
+                    "openInterest": put.get("openInterest", 0) or 0,
+                    "source": "Yahoo Finance"
+                })
+        print(f"Se obtuvieron {len(opciones_put)} opciones PUT de Yahoo Finance para {stock.ticker}")
+        return opciones_put, "Yahoo Finance", None
+    except Exception as e:
+        print(f"Error al obtener opciones de Yahoo Finance para {stock.ticker}: {e}")
+        return [], "Yahoo Finance", str(e)
+
+def obtener_opciones_finnhub(ticker):
+    """Obtiene las opciones PUT desde Finnhub como respaldo."""
+    url = f"https://finnhub.io/api/v1/stock/option-chain?symbol={ticker}&token={FINNHUB_API_KEY}"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        data = response.json()
+        opciones_put = []
+        for expiration in data.get("data", []):
+            fecha = expiration["expirationDate"]
+            for option in expiration["options"]["PUT"]:
+                opciones_put.append({
+                    "strike": float(option["strike"]),
+                    "lastPrice": float(option.get("last", 0) or 0),
+                    "expirationDate": fecha,
+                    "volume": option.get("volume", 0) or 0,
+                    "impliedVolatility": (option.get("impliedVolatility", 0) or 0) * 100,
+                    "openInterest": option.get("openInterest", 0) or 0,
+                    "source": "Finnhub"
+                })
+        print(f"Se obtuvieron {len(opciones_put)} opciones PUT de Finnhub para {ticker}")
+        return opciones_put, "Finnhub", None
+    except requests.exceptions.RequestException as e:
+        print(f"Error al obtener datos de Finnhub para {ticker}: {e}")
+        return [], "Finnhub", str(e)
+
+def combinar_opciones(opciones_yahoo, opciones_finnhub):
+    """Combina opciones de Yahoo Finance y Finnhub, usando Finnhub como respaldo."""
+    opciones_combinadas = []
+    opciones_dict = {}  # Diccionario para manejar duplicados (clave: strike + expirationDate)
+
+    # Primero procesamos Yahoo Finance (fuente principal)
+    for opcion in opciones_yahoo:
+        key = (opcion["strike"], opcion["expirationDate"])
+        opciones_dict[key] = opcion
+
+    # Luego procesamos Finnhub (como respaldo), solo si no hay datos en Yahoo o son insuficientes
+    for opcion in opciones_finnhub:
+        key = (opcion["strike"], opcion["expirationDate"])
+        if key not in opciones_dict or opciones_dict[key]["lastPrice"] == 0:
+            opciones_dict[key] = opcion
+
+    opciones_combinadas = list(opciones_dict.values())
+    return opciones_combinadas
+
+def obtener_opciones_put(ticker, stock):
+    """Obtiene las opciones PUT del ticker combinando Yahoo Finance y Finnhub como respaldo."""
+    # Obtener datos de Yahoo Finance
+    opciones_yahoo, source_yahoo, error_yahoo = obtener_opciones_yahoo(stock)
+    # Obtener datos de Finnhub como respaldo
+    opciones_finnhub, source_finnhub, error_finnhub = obtener_opciones_finnhub(ticker)
+
+    # Combinar opciones
+    opciones_combinadas = combinar_opciones(opciones_yahoo, opciones_finnhub)
+    print(f"Se combinaron {len(opciones_combinadas)} opciones PUT para {ticker}")
+
+    # Determinar las fuentes utilizadas
+    fuentes_usadas = []
+    if opciones_yahoo:
+        fuentes_usadas.append("Yahoo Finance")
+    if opciones_finnhub:
+        fuentes_usadas.append("Finnhub")
+    fuentes_texto = " y ".join(fuentes_usadas) if fuentes_usadas else "Ninguna fuente disponible"
+
+    # Registrar errores (si los hay)
+    errores = []
+    if error_yahoo:
+        errores.append(f"Yahoo Finance: {error_yahoo}")
+    if error_finnhub:
+        errores.append(f"Finnhub: {error_finnhub}")
+    errores_texto = "; ".join(errores) if errores else "Ninguno"
+
+    return opciones_combinadas, fuentes_texto, errores_texto
 
 def calcular_rentabilidad(precio_put, precio_subyacente, dias_vencimiento):
     """Calcula la rentabilidad diaria y anualizada."""
@@ -200,7 +283,12 @@ def analizar_opciones():
                 print(f"Mínimo de las últimas 52 semanas: ${minimo_52_semanas:.2f}")
                 print(f"Máximo de las últimas 52 semanas: ${maximo_52_semanas:.2f}")
 
-                opciones_put = obtener_opciones_put(stock)
+                opciones_put, fuentes_texto, errores_texto = obtener_opciones_put(ticker, stock)
+                resultado += f"Datos de opciones para {ticker} obtenidos de: {fuentes_texto}\n"
+                resultado += f"Errores al obtener datos: {errores_texto}\n"
+                print(f"Datos de opciones para {ticker} obtenidos de: {fuentes_texto}")
+                print(f"Errores al obtener datos: {errores_texto}")
+
                 print(f"Se encontraron {len(opciones_put)} opciones PUT para {ticker}")
                 opciones_filtradas = []
                 for contrato in opciones_put:
@@ -209,8 +297,9 @@ def analizar_opciones():
                     vencimiento_str = contrato["expirationDate"]
                     dias_vencimiento = (datetime.strptime(vencimiento_str, "%Y-%m-%d") - datetime.now()).days
                     volumen = contrato["volume"]
-                    volatilidad_implícita = contrato["impliedVolatility"] * 100
+                    volatilidad_implícita = contrato["impliedVolatility"]
                     open_interest = contrato["openInterest"]
+                    source = contrato["source"]
 
                     if FILTRO_TIPO_OPCION == "OTM":
                         if strike >= precio_subyacente:
@@ -223,7 +312,7 @@ def analizar_opciones():
                         continue
                     if volumen < MIN_VOLUMEN:
                         continue
-                    if volatilidad_implícita < MIN_VOLATILIDAD_IMPLÍCITA:  # Solo se aplica el mínimo
+                    if volatilidad_implícita < MIN_VOLATILIDAD_IMPLÍCITA:
                         continue
                     if open_interest < MIN_OPEN_INTEREST:
                         continue
@@ -245,7 +334,8 @@ def analizar_opciones():
                             "diferencia_porcentual": diferencia_porcentual,
                             "volatilidad_implícita": volatilidad_implícita,
                             "volumen": volumen,
-                            "open_interest": open_interest
+                            "open_interest": open_interest,
+                            "source": source
                         }
                         opciones_filtradas.append(opcion)
                         todas_las_opciones.append(opcion)
@@ -262,7 +352,8 @@ def analizar_opciones():
                             f"{diferencia_porcentual:.2f}%",
                             f"{volatilidad_implícita:.2f}%",
                             volumen,
-                            open_interest
+                            open_interest,
+                            source
                         ])
 
                 if opciones_filtradas:
@@ -283,7 +374,8 @@ def analizar_opciones():
                             f"{opcion['diferencia_porcentual']:.2f}%",
                             f"{opcion['volatilidad_implícita']:.2f}%",
                             opcion['volumen'],
-                            opcion['open_interest']
+                            opcion['open_interest'],
+                            opcion['source']
                         ])
                     
                     headers = [
@@ -297,7 +389,8 @@ def analizar_opciones():
                         "Dif. % (Suby.-Break.)",
                         "Volatilidad Implícita",
                         "Volumen",
-                        "Interés Abierto"
+                        "Interés Abierto",
+                        "Fuente"
                     ]
                     
                     tabla = tabulate(tabla_datos, headers=headers, tablefmt="grid")
@@ -306,7 +399,7 @@ def analizar_opciones():
 
                     for opcion in opciones_filtradas:
                         if (opcion['rentabilidad_anual'] >= ALERTA_RENTABILIDAD_ANUAL and 
-                            opcion['volatilidad_implícita'] >= ALERTA_VOLATILIDAD_MINIMA):  # Alerta con valores hardcodeados
+                            opcion['volatilidad_implícita'] >= ALERTA_VOLATILIDAD_MINIMA):
                             alerta_msg = f"¡Oportunidad destacada! {ticker}: Rentabilidad anual: {opcion['rentabilidad_anual']:.2f}%, Volatilidad: {opcion['volatilidad_implícita']:.2f}% (Strike: ${opcion['strike']:.2f}, Vencimiento: {opcion['vencimiento']})\n"
                             resultado += alerta_msg
                             print(alerta_msg)
@@ -334,7 +427,8 @@ def analizar_opciones():
                 "Dif. % (Suby.-Break.)",
                 "Volatilidad Implícita",
                 "Volumen",
-                "Interés Abierto"
+                "Interés Abierto",
+                "Fuente"
             ]
             df_todas = pd.DataFrame(todas_las_opciones_df, columns=headers_csv)
             df_todas.to_csv("todas_las_opciones.csv", index=False)
@@ -366,7 +460,8 @@ def analizar_opciones():
                     f"{opcion['diferencia_porcentual']:.2f}%",
                     f"{opcion['volatilidad_implícita']:.2f}%",
                     opcion['volumen'],
-                    opcion['open_interest']
+                    opcion['open_interest'],
+                    opcion['source']
                 ])
 
                 mejores_opciones_df.append([
@@ -381,7 +476,8 @@ def analizar_opciones():
                     f"{opcion['diferencia_porcentual']:.2f}%",
                     f"{opcion['volatilidad_implícita']:.2f}%",
                     opcion['volumen'],
-                    opcion['open_interest']
+                    opcion['open_interest'],
+                    opcion['source']
                 ])
 
             headers_mejores = [
@@ -396,7 +492,8 @@ def analizar_opciones():
                 "Dif. % (Suby.-Break.)",
                 "Volatilidad Implícita",
                 "Volumen",
-                "Interés Abierto"
+                "Interés Abierto",
+                "Fuente"
             ]
 
             tabla = tabulate(tabla_mejores, headers=headers_mejores, tablefmt="grid")
