@@ -1,86 +1,86 @@
-name: Ejecutar Script de Opciones
+name: Analizar Opciones
 
 on:
   schedule:
-    - cron: '0 8,12,16,20 * * *'  # Ejecuta a las 9:00, 13:00, 17:00, 21:00 CET (UTC+1)
-  workflow_dispatch:  # Permite ejecución manual
+    - cron: '0 13 * * *'  # Ejecuta diariamente a las 13:00 UTC
+  workflow_dispatch:
     inputs:
-      tickers:
-        description: 'Tickers a analizar (separados por comas, ej: NA9.DE,TEP.PA,GOOGL)'
+      TICKERS:
+        description: 'Lista de tickers a analizar (separados por comas)'
         required: false
         default: 'NA9.DE,TEP.PA,GOOGL,EPAM,NFE,GLNG,GLOB,NVDA'
-      min_rentabilidad_anual:
+      MIN_RENTABILIDAD_ANUAL:
         description: 'Mínima rentabilidad anual (%)'
         required: false
-        default: '45'
-      max_dias_vencimiento:
+        default: '45.0'
+      MAX_DIAS_VENCIMIENTO:
         description: 'Máximo días al vencimiento'
         required: false
         default: '45'
-      min_diferencia_porcentual:
+      MIN_DIFERENCIA_PORCENTUAL:
         description: 'Mínima diferencia porcentual (%)'
         required: false
-        default: '5'
-      min_volatilidad_implicita:
+        default: '5.0'
+      MIN_VOLATILIDAD_IMPLÍCITA:
         description: 'Mínima volatilidad implícita (%)'
         required: false
-        default: '35'
-      filtro_tipo_opcion:
-        description: 'Filtro tipo opción (OTM, ITM, TODAS)'
+        default: '35.0'
+      FILTRO_TIPO_OPCION:
+        description: 'Tipo de opción (OTM, ITM, TODAS)'
         required: false
         default: 'OTM'
-      top_contratos:
-        description: 'Número de contratos a mostrar en "Mejores Contratos"'
+      TOP_CONTRATOS:
+        description: 'Número máximo de contratos por ticker'
         required: false
-        default: '6'
+        default: '5'
+      FORCE_DISCORD_NOTIFICATION:
+        description: 'Forzar notificación a Discord (true/false)'
+        required: false
+        default: 'false'
+      MIN_BID:  # Nuevo campo
+        description: 'Mínimo bid para los contratos ($)'
+        required: false
+        default: '0.99'
 
 jobs:
   analizar-opciones:
     runs-on: ubuntu-latest
 
     steps:
-      # Clonar el repositorio
       - name: Checkout del repositorio
         uses: actions/checkout@v4
 
-      # Configurar Python
       - name: Configurar Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          python-version: '3.11'
 
-      # Instalar dependencias
       - name: Instalar dependencias
         run: |
           python -m pip install --upgrade pip
           pip install yfinance pandas tabulate requests
 
-      # Ejecutar el script con las configuraciones proporcionadas
       - name: Ejecutar script de análisis de opciones
         env:
-          TICKERS: ${{ github.event.inputs.tickers || 'NA9.DE,TEP.PA,GOOGL,EPAM,NFE,GLNG,GLOB,NVDA' }}
-          MIN_RENTABILIDAD_ANUAL: ${{ github.event.inputs.min_rentabilidad_anual || '45' }}
-          MAX_DIAS_VENCIMIENTO: ${{ github.event.inputs.max_dias_vencimiento || '45' }}
-          MIN_DIFERENCIA_PORCENTUAL: ${{ github.event.inputs.min_diferencia_porcentual || '5' }}
-          MIN_VOLATILIDAD_IMPLÍCITA: ${{ github.event.inputs.min_volatilidad_implicita || '35' }}
-          FILTRO_TIPO_OPCION: ${{ github.event.inputs.filtro_tipo_opcion || 'OTM' }}
-          TOP_CONTRATOS: ${{ github.event.inputs.top_contratos || '10' }}
+          TICKERS: ${{ github.event.inputs.TICKERS }}
+          MIN_RENTABILIDAD_ANUAL: ${{ github.event.inputs.MIN_RENTABILIDAD_ANUAL }}
+          MAX_DIAS_VENCIMIENTO: ${{ github.event.inputs.MAX_DIAS_VENCIMIENTO }}
+          MIN_DIFERENCIA_PORCENTUAL: ${{ github.event.inputs.MIN_DIFERENCIA_PORCENTUAL }}
+          MIN_VOLATILIDAD_IMPLÍCITA: ${{ github.event.inputs.MIN_VOLATILIDAD_IMPLÍCITA }}
+          FILTRO_TIPO_OPCION: ${{ github.event.inputs.FILTRO_TIPO_OPCION }}
+          TOP_CONTRATOS: ${{ github.event.inputs.TOP_CONTRATOS }}
+          FORCE_DISCORD_NOTIFICATION: ${{ github.event.inputs.FORCE_DISCORD_NOTIFICATION }}
+          MIN_BID: ${{ github.event.inputs.MIN_BID }}  # Nueva variable de entorno
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
-          echo "TICKERS=$TICKERS"
-          echo "MIN_RENTABILIDAD_ANUAL=$MIN_RENTABILIDAD_ANUAL"
-          echo "MAX_DIAS_VENCIMIENTO=$MAX_DIAS_VENCIMIENTO"
-          echo "MIN_DIFERENCIA_PORCENTUAL=$MIN_DIFERENCIA_PORCENTUAL"
-          echo "MIN_VOLATILIDAD_IMPLÍCITA=$MIN_VOLATILIDAD_IMPLÍCITA"
-          echo "FILTRO_TIPO_OPCION=$FILTRO_TIPO_OPCION"
-          echo "TOP_CONTRATOS=$TOP_CONTRATOS"
           python analizar_opciones.py
 
-      # Subir los resultados como artifact
-      - name: Subir resultados como artifact
+      - name: Subir resultados como artefactos
         uses: actions/upload-artifact@v4
         with:
-          name: resultados-opciones
+          name: resultados
           path: |
             resultados.txt
             todas_las_opciones.csv
+            Mejores_Contratos.txt
             mejores_contratos.csv
