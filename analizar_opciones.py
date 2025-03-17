@@ -2,11 +2,11 @@ import yfinance as yf
 from datetime import datetime
 import os
 from tabulate import tabulate
-import pandas as pd  # Para exportar a CSV
-import requests  # Para enviar notificaciones a Discord y solicitudes a Finnhub
-import time  # Para agregar retrasos entre solicitudes
+import pandas as pd
+import requests
+import time
 
-# Configuración para Discord (Idea 2)
+# Configuración para Discord
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1350463523196768356/ePmWnO2XWnfD582oMAr2WzqSFs7ZxU1ApRYi1bz8PiSbZE5zAcR7ZoOD8SPVofxA9UUW"
 
 # Variable para evitar ejecuciones múltiples
@@ -18,13 +18,13 @@ DEFAULT_CONFIG = {
     "MIN_RENTABILIDAD_ANUAL": 45.0,
     "MAX_DIAS_VENCIMIENTO": 45,
     "MIN_DIFERENCIA_PORCENTUAL": 5.0,
-    "MIN_VOLUMEN": 1,  # Hardcodeado
-    "MIN_VOLATILIDAD_IMPLÍCITA": 35.0,  # Mínimo de volatilidad para filtros
-    "MIN_OPEN_INTEREST": 1,  # Hardcodeado
+    "MIN_VOLUMEN": 1,
+    "MIN_VOLATILIDAD_IMPLÍCITA": 35.0,
+    "MIN_OPEN_INTEREST": 1,
     "FILTRO_TIPO_OPCION": "OTM",
     "TOP_CONTRATOS": 10,
-    "ALERTA_RENTABILIDAD_ANUAL": 50.0,  # Hardcodeado
-    "ALERTA_VOLATILIDAD_MINIMA": 50.0   # Hardcodeado
+    "ALERTA_RENTABILIDAD_ANUAL": 50.0,
+    "ALERTA_VOLATILIDAD_MINIMA": 50.0
 }
 
 # Clave API de Finnhub
@@ -34,45 +34,62 @@ def obtener_configuracion():
     """Obtiene la configuración desde variables de entorno con valores por defecto del script."""
     # TICKERS
     TICKERS = os.getenv("TICKERS", DEFAULT_CONFIG["TICKERS"])
-    TICKERS = list(set(TICKERS.split(",")))  # Convertir a lista y eliminar duplicados
+    print(f"Valor de TICKERS desde os.getenv: {TICKERS}")
+    if not TICKERS:
+        raise ValueError("No se especificaron tickers válidos. Define TICKERS en las variables de entorno.")
+    TICKERS = [t.strip() for t in TICKERS.split(",") if t.strip()]  # Eliminar espacios y elementos vacíos
+    TICKERS = list(set(TICKERS))  # Eliminar duplicados
+    if not TICKERS:
+        raise ValueError("La lista de tickers está vacía después de procesar.")
+    print(f"Tickers procesados: {TICKERS}")
 
     # MIN_RENTABILIDAD_ANUAL
     min_rentabilidad_env = os.getenv("MIN_RENTABILIDAD_ANUAL", str(DEFAULT_CONFIG["MIN_RENTABILIDAD_ANUAL"]))
     MIN_RENTABILIDAD_ANUAL = float(min_rentabilidad_env) if min_rentabilidad_env else DEFAULT_CONFIG["MIN_RENTABILIDAD_ANUAL"]
+    print(f"MIN_RENTABILIDAD_ANUAL: {MIN_RENTABILIDAD_ANUAL}")
 
     # MAX_DIAS_VENCIMIENTO
     max_dias_env = os.getenv("MAX_DIAS_VENCIMIENTO", str(DEFAULT_CONFIG["MAX_DIAS_VENCIMIENTO"]))
     MAX_DIAS_VENCIMIENTO = int(max_dias_env) if max_dias_env else DEFAULT_CONFIG["MAX_DIAS_VENCIMIENTO"]
+    print(f"MAX_DIAS_VENCIMIENTO: {MAX_DIAS_VENCIMIENTO}")
 
     # MIN_DIFERENCIA_PORCENTUAL
     min_dif_env = os.getenv("MIN_DIFERENCIA_PORCENTUAL", str(DEFAULT_CONFIG["MIN_DIFERENCIA_PORCENTUAL"]))
     MIN_DIFERENCIA_PORCENTUAL = float(min_dif_env) if min_dif_env else DEFAULT_CONFIG["MIN_DIFERENCIA_PORCENTUAL"]
+    print(f"MIN_DIFERENCIA_PORCENTUAL: {MIN_DIFERENCIA_PORCENTUAL}")
 
-    # MIN_VOLUMEN (hardcodeado, no configurable desde variables de entorno)
+    # MIN_VOLUMEN (hardcodeado)
     MIN_VOLUMEN = DEFAULT_CONFIG["MIN_VOLUMEN"]
+    print(f"MIN_VOLUMEN: {MIN_VOLUMEN}")
 
     # MIN_VOLATILIDAD_IMPLÍCITA
     min_vol_env = os.getenv("MIN_VOLATILIDAD_IMPLÍCITA", str(DEFAULT_CONFIG["MIN_VOLATILIDAD_IMPLÍCITA"]))
     MIN_VOLATILIDAD_IMPLÍCITA = float(min_vol_env) if min_vol_env else DEFAULT_CONFIG["MIN_VOLATILIDAD_IMPLÍCITA"]
+    print(f"MIN_VOLATILIDAD_IMPLÍCITA: {MIN_VOLATILIDAD_IMPLÍCITA}")
 
-    # MIN_OPEN_INTEREST (hardcodeado, no configurable desde variables de entorno)
+    # MIN_OPEN_INTEREST (hardcodeado)
     MIN_OPEN_INTEREST = DEFAULT_CONFIG["MIN_OPEN_INTEREST"]
+    print(f"MIN_OPEN_INTEREST: {MIN_OPEN_INTEREST}")
 
     # FILTRO_TIPO_OPCION
     FILTRO_TIPO_OPCION = os.getenv("FILTRO_TIPO_OPCION", DEFAULT_CONFIG["FILTRO_TIPO_OPCION"]).upper()
     if FILTRO_TIPO_OPCION not in ["OTM", "ITM", "TODAS"]:
         print(f"Valor inválido para FILTRO_TIPO_OPCION: {FILTRO_TIPO_OPCION}. Usando valor por defecto: {DEFAULT_CONFIG['FILTRO_TIPO_OPCION']}")
         FILTRO_TIPO_OPCION = DEFAULT_CONFIG["FILTRO_TIPO_OPCION"]
+    print(f"FILTRO_TIPO_OPCION: {FILTRO_TIPO_OPCION}")
 
     # TOP_CONTRATOS
     top_contratos_env = os.getenv("TOP_CONTRATOS", str(DEFAULT_CONFIG["TOP_CONTRATOS"]))
     TOP_CONTRATOS = int(top_contratos_env) if top_contratos_env else DEFAULT_CONFIG["TOP_CONTRATOS"]
+    print(f"TOP_CONTRATOS: {TOP_CONTRATOS}")
 
-    # ALERTA_RENTABILIDAD_ANUAL (hardcodeado, no configurable desde variables de entorno)
+    # ALERTA_RENTABILIDAD_ANUAL (hardcodeado)
     ALERTA_RENTABILIDAD_ANUAL = DEFAULT_CONFIG["ALERTA_RENTABILIDAD_ANUAL"]
+    print(f"ALERTA_RENTABILIDAD_ANUAL: {ALERTA_RENTABILIDAD_ANUAL}")
 
-    # ALERTA_VOLATILIDAD_MINIMA (hardcodeado, no configurable desde variables de entorno)
+    # ALERTA_VOLATILIDAD_MINIMA (hardcodeado)
     ALERTA_VOLATILIDAD_MINIMA = DEFAULT_CONFIG["ALERTA_VOLATILIDAD_MINIMA"]
+    print(f"ALERTA_VOLATILIDAD_MINIMA: {ALERTA_VOLATILIDAD_MINIMA}")
 
     return (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
             MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
@@ -80,6 +97,8 @@ def obtener_configuracion():
 
 def obtener_datos_subyacente(ticker):
     """Obtiene el precio del subyacente, mínimo y máximo de 52 semanas."""
+    if not ticker:
+        raise ValueError("El ticker no puede estar vacío.")
     stock = yf.Ticker(ticker)
     precio = stock.info.get('regularMarketPrice', None)
     minimo_52_semanas = stock.info.get('fiftyTwoWeekLow', None)
@@ -143,12 +162,10 @@ def combinar_opciones(opciones_yahoo, opciones_finnhub):
     opciones_combinadas = []
     opciones_dict = {}  # Diccionario para manejar duplicados (clave: strike + expirationDate)
 
-    # Primero procesamos Yahoo Finance (fuente principal)
     for opcion in opciones_yahoo:
         key = (opcion["strike"], opcion["expirationDate"])
         opciones_dict[key] = opcion
 
-    # Luego procesamos Finnhub (como respaldo), solo si no hay datos en Yahoo o son insuficientes
     for opcion in opciones_finnhub:
         key = (opcion["strike"], opcion["expirationDate"])
         if key not in opciones_dict or opciones_dict[key]["lastPrice"] == 0:
@@ -159,16 +176,12 @@ def combinar_opciones(opciones_yahoo, opciones_finnhub):
 
 def obtener_opciones_put(ticker, stock):
     """Obtiene las opciones PUT del ticker combinando Yahoo Finance y Finnhub como respaldo."""
-    # Obtener datos de Yahoo Finance
     opciones_yahoo, source_yahoo, error_yahoo = obtener_opciones_yahoo(stock)
-    # Obtener datos de Finnhub como respaldo
     opciones_finnhub, source_finnhub, error_finnhub = obtener_opciones_finnhub(ticker)
 
-    # Combinar opciones
     opciones_combinadas = combinar_opciones(opciones_yahoo, opciones_finnhub)
     print(f"Se combinaron {len(opciones_combinadas)} opciones PUT para {ticker}")
 
-    # Determinar las fuentes utilizadas
     fuentes_usadas = []
     if opciones_yahoo:
         fuentes_usadas.append("Yahoo Finance")
@@ -176,7 +189,6 @@ def obtener_opciones_put(ticker, stock):
         fuentes_usadas.append("Finnhub")
     fuentes_texto = " y ".join(fuentes_usadas) if fuentes_usadas else "Ninguna fuente disponible"
 
-    # Registrar errores (si los hay)
     errores = []
     if error_yahoo:
         errores.append(f"Yahoo Finance: {error_yahoo}")
@@ -237,6 +249,8 @@ def enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto, top_contrat
 def analizar_opciones():
     global SCRIPT_EJECUTADO
 
+    print(f"Iniciando ejecución del script a las {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC")
+
     if SCRIPT_EJECUTADO:
         print("El script ya ha sido ejecutado. Evitando repetición.")
         return
@@ -249,6 +263,7 @@ def analizar_opciones():
 
     # Detectar si es una ejecución manual o automática
     es_ejecucion_manual = os.getenv("GITHUB_EVENT_NAME", "schedule") == "workflow_dispatch"
+    print(f"Es ejecución manual: {es_ejecucion_manual}")
 
     # Resumen de condiciones para el archivo .txt
     resumen_condiciones = (
@@ -500,7 +515,6 @@ def analizar_opciones():
             resultado += f"\n{tabla}\n"
             print(tabla)
 
-            # Enviar notificación solo si es una ejecución automática
             if not es_ejecucion_manual and mejores_opciones:
                 enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto, TOP_CONTRATOS)
 
