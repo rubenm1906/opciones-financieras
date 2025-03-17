@@ -11,7 +11,7 @@ DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1350463523196768356/ePmW
 
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
-ENVIAR_NOTIFICACION_MANUAL = False  # Cambia a True para forzar la notificación manualmente
+ENVIAR_NOTIFICACION_MANUAL = True  # Cambia a True para forzar la notificación manualmente
 
 # Configuraciones por defecto (ajustables manualmente)
 DEFAULT_CONFIG = {
@@ -20,13 +20,13 @@ DEFAULT_CONFIG = {
     "MAX_DIAS_VENCIMIENTO": 45,
     "MIN_DIFERENCIA_PORCENTUAL": 5.0,
     "MIN_VOLUMEN": 1,
-    "MIN_VOLATILIDAD_IMPLÍCITA": 35.0,
+    "MIN_VOLATILIDAD_IMPLICITA": 35.0,
     "MIN_OPEN_INTEREST": 1,
     "FILTRO_TIPO_OPCION": "OTM",
     "TOP_CONTRATOS": 5,
     "ALERTA_RENTABILIDAD_ANUAL": 50.0,
     "ALERTA_VOLATILIDAD_MINIMA": 50.0,
-    "MIN_BID": 0.99  # Nueva variable para excluir bids menores a 0.99
+    "MIN_BID": 0.99
 }
 
 # Clave API de Finnhub
@@ -64,10 +64,10 @@ def obtener_configuracion():
     MIN_VOLUMEN = DEFAULT_CONFIG["MIN_VOLUMEN"]
     print(f"MIN_VOLUMEN: {MIN_VOLUMEN}")
 
-    # MIN_VOLATILIDAD_IMPLÍCITA
-    min_vol_env = os.getenv("MIN_VOLATILIDAD_IMPLÍCITA", str(DEFAULT_CONFIG["MIN_VOLATILIDAD_IMPLÍCITA"]))
-    MIN_VOLATILIDAD_IMPLÍCITA = float(min_vol_env) if min_vol_env else DEFAULT_CONFIG["MIN_VOLATILIDAD_IMPLÍCITA"]
-    print(f"MIN_VOLATILIDAD_IMPLÍCITA: {MIN_VOLATILIDAD_IMPLÍCITA}")
+    # MIN_VOLATILIDAD_IMPLICITA
+    min_vol_env = os.getenv("MIN_VOLATILIDAD_IMPLICITA", str(DEFAULT_CONFIG["MIN_VOLATILIDAD_IMPLICITA"]))
+    MIN_VOLATILIDAD_IMPLICITA = float(min_vol_env) if min_vol_env else DEFAULT_CONFIG["MIN_VOLATILIDAD_IMPLICITA"]
+    print(f"MIN_VOLATILIDAD_IMPLICITA: {MIN_VOLATILIDAD_IMPLICITA}")
 
     # MIN_OPEN_INTEREST (hardcodeado)
     MIN_OPEN_INTEREST = DEFAULT_CONFIG["MIN_OPEN_INTEREST"]
@@ -99,7 +99,7 @@ def obtener_configuracion():
     print(f"MIN_BID: {MIN_BID}")
 
     return (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
-            MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
+            MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLICITA, MIN_OPEN_INTEREST,
             FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_VOLATILIDAD_MINIMA, MIN_BID)
 
 def obtener_datos_subyacente(ticker):
@@ -167,18 +167,41 @@ def obtener_opciones_finnhub(ticker):
         return [], "Finnhub", str(e)
 
 def combinar_opciones(opciones_yahoo, opciones_finnhub):
-    """Combina opciones de Yahoo Finance y Finnhub, usando Finnhub como respaldo."""
+    """Combina opciones de Yahoo Finance y Finnhub, usando Finnhub como respaldo para campos faltantes."""
     opciones_combinadas = []
     opciones_dict = {}  # Diccionario para manejar duplicados (clave: strike + expirationDate)
 
+    # Primero agregar todas las opciones de Yahoo Finance
     for opcion in opciones_yahoo:
         key = (opcion["strike"], opcion["expirationDate"])
         opciones_dict[key] = opcion
 
+    # Luego complementar o reemplazar con datos de Finnhub si hay campos faltantes
     for opcion in opciones_finnhub:
         key = (opcion["strike"], opcion["expirationDate"])
-        if key not in opciones_dict or opciones_dict[key]["lastPrice"] == 0:
+        if key not in opciones_dict:  # Si no existe, agregar directamente
             opciones_dict[key] = opcion
+        else:  # Si existe, complementar si faltan datos (por ejemplo, bid es nan)
+            opcion_existente = opciones_dict[key]
+            updated = False
+            if pd.isna(opcion_existente["bid"]) or opcion_existente["bid"] == 0:  # Si bid está ausente o es 0
+                opcion_existente["bid"] = opcion["bid"]  # Actualizar bid desde Finnhub
+                updated = True
+            if pd.isna(opcion_existente["lastPrice"]) or opcion_existente["lastPrice"] == 0:  # Si lastPrice está ausente o es 0
+                opcion_existente["lastPrice"] = opcion["lastPrice"]  # Actualizar lastPrice desde Finnhub
+                updated = True
+            if pd.isna(opcion_existente["volume"]) or opcion_existente["volume"] == 0:  # Si volume está ausente o es 0
+                opcion_existente["volume"] = opcion["volume"]  # Actualizar volume desde Finnhub
+                updated = True
+            if pd.isna(opcion_existente["openInterest"]) or opcion_existente["openInterest"] == 0:  # Si openInterest está ausente o es 0
+                opcion_existente["openInterest"] = opcion["openInterest"]  # Actualizar openInterest desde Finnhub
+                updated = True
+            if pd.isna(opcion_existente["impliedVolatility"]) or opcion_existente["impliedVolatility"] == 0:  # Si impliedVolatility está ausente o es 0
+                opcion_existente["impliedVolatility"] = opcion["impliedVolatility"]  # Actualizar impliedVolatility desde Finnhub
+                updated = True
+            # Si se actualizó algún campo, cambiar la fuente a "Yahoo + Finnhub"
+            if updated:
+                opcion_existente["source"] = "Yahoo + Finnhub"
 
     opciones_combinadas = list(opciones_dict.values())
     return opciones_combinadas
@@ -278,7 +301,7 @@ def analizar_opciones():
     # Obtener configuración desde variables de entorno con valores por defecto del script
     try:
         (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
-         MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
+         MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLICITA, MIN_OPEN_INTEREST,
          FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_VOLATILIDAD_MINIMA, MIN_BID) = obtener_configuracion()
     except Exception as e:
         error_msg = f"Error al obtener la configuración: {e}\n"
@@ -301,9 +324,9 @@ def analizar_opciones():
         f"Máximo días al vencimiento: {MAX_DIAS_VENCIMIENTO}\n"
         f"Mínima diferencia porcentual: {MIN_DIFERENCIA_PORCENTUAL}%\n"
         f"Mínimo volumen: {MIN_VOLUMEN}\n"
-        f"Volatilidad implícita mínima: {MIN_VOLATILIDAD_IMPLÍCITA}%\n"
+        f"Volatilidad implícita mínima: {MIN_VOLATILIDAD_IMPLICITA}%\n"
         f"Mínimo interés abierto: {MIN_OPEN_INTEREST}\n"
-        f"Mínimo bid: ${MIN_BID}\n"  # Nueva línea para MIN_BID
+        f"Mínimo bid: ${MIN_BID}\n"
         f"{'='*50}\n\n"
     )
 
@@ -356,11 +379,11 @@ def analizar_opciones():
                         continue
                     if volumen < MIN_VOLUMEN:
                         continue
-                    if volatilidad_implícita < MIN_VOLATILIDAD_IMPLÍCITA:
+                    if volatilidad_implícita < MIN_VOLATILIDAD_IMPLICITA:
                         continue
                     if open_interest < MIN_OPEN_INTEREST:
                         continue
-                    if bid < MIN_BID:  # Nuevo filtro para excluir bids menores a MIN_BID
+                    if bid < MIN_BID:
                         continue
 
                     rent_diaria, rent_anual = calcular_rentabilidad(precio_put, precio_subyacente, dias_vencimiento)
@@ -406,7 +429,7 @@ def analizar_opciones():
 
                 if opciones_filtradas:
                     tipo_opcion_texto = "Out of the Money" if FILTRO_TIPO_OPCION == "OTM" else "In the Money" if FILTRO_TIPO_OPCION == "ITM" else "Todas"
-                    resultado += f"\nOpciones PUT {tipo_opcion_texto} con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}, volatilidad >= {MIN_VOLATILIDAD_IMPLÍCITA}%, interés abierto > {MIN_OPEN_INTEREST}, bid >= ${MIN_BID}):\n"  # Actualizado con MIN_BID
+                    resultado += f"\nOpciones PUT {tipo_opcion_texto} con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}, volatilidad >= {MIN_VOLATILIDAD_IMPLICITA}%, interés abierto > {MIN_OPEN_INTEREST}, bid >= ${MIN_BID}):\n"
                     print(f"Se encontraron {len(opciones_filtradas)} opciones que cumplen los filtros para {ticker}")
                     
                     tabla_datos = []
