@@ -58,14 +58,21 @@ jobs:
       # Ejecutar el script con las configuraciones proporcionadas
       - name: Ejecutar script de análisis de opciones
         env:
-          TICKERS: ${{ github.event.inputs.tickers }}
-          MIN_RENTABILIDAD_ANUAL: ${{ github.event.inputs.min_rentabilidad_anual }}
-          MAX_DIAS_VENCIMIENTO: ${{ github.event.inputs.max_dias_vencimiento }}
-          MIN_DIFERENCIA_PORCENTUAL: ${{ github.event.inputs.min_diferencia_porcentual }}
-          MIN_VOLATILIDAD_IMPLÍCITA: ${{ github.event.inputs.min_volatilidad_implicita }}
-          FILTRO_TIPO_OPCION: ${{ github.event.inputs.filtro_tipo_opcion }}
-          TOP_CONTRATOS: ${{ github.event.inputs.top_contratos }}
+          TICKERS: ${{ github.event.inputs.tickers || 'NA9.DE,TEP.PA,GOOGL,EPAM,NFE,GLNG,GLOB,NVDA' }}
+          MIN_RENTABILIDAD_ANUAL: ${{ github.event.inputs.min_rentabilidad_anual || '45' }}
+          MAX_DIAS_VENCIMIENTO: ${{ github.event.inputs.max_dias_vencimiento || '45' }}
+          MIN_DIFERENCIA_PORCENTUAL: ${{ github.event.inputs.min_diferencia_porcentual || '5' }}
+          MIN_VOLATILIDAD_IMPLÍCITA: ${{ github.event.inputs.min_volatilidad_implicita || '35' }}
+          FILTRO_TIPO_OPCION: ${{ github.event.inputs.filtro_tipo_opcion || 'OTM' }}
+          TOP_CONTRATOS: ${{ github.event.inputs.top_contratos || '10' }}
         run: |
+          echo "TICKERS=$TICKERS"
+          echo "MIN_RENTABILIDAD_ANUAL=$MIN_RENTABILIDAD_ANUAL"
+          echo "MAX_DIAS_VENCIMIENTO=$MAX_DIAS_VENCIMIENTO"
+          echo "MIN_DIFERENCIA_PORCENTUAL=$MIN_DIFERENCIA_PORCENTUAL"
+          echo "MIN_VOLATILIDAD_IMPLÍCITA=$MIN_VOLATILIDAD_IMPLÍCITA"
+          echo "FILTRO_TIPO_OPCION=$FILTRO_TIPO_OPCION"
+          echo "TOP_CONTRATOS=$TOP_CONTRATOS"
           python analizar_opciones.py
 
       # Subir los resultados como artifact
