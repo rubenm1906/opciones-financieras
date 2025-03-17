@@ -22,7 +22,7 @@ DEFAULT_CONFIG = {
     "MIN_VOLATILIDAD_IMPLÍCITA": 35.0,
     "MIN_OPEN_INTEREST": 1,
     "FILTRO_TIPO_OPCION": "OTM",
-    "TOP_CONTRATOS": 5,
+    "TOP_CONTRATOS": 5,  # Cambiado de 10 a 5 como valor por defecto
     "ALERTA_RENTABILIDAD_ANUAL": 50.0,
     "ALERTA_VOLATILIDAD_MINIMA": 50.0
 }
@@ -219,7 +219,7 @@ def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identi
     """Envía el archivo Mejores_Contratos.txt a Discord como un adjunto y menciona los tickers identificados."""
     ticker_list = ", ".join(tickers_identificados) if tickers_identificados else "Ninguno"
     mensaje = (f"Se encontraron contratos que cumplen los filtros de alerta.\n"
-               f"Mejores 5 Contratos por Ticker {tipo_opcion_texto}\n"
+               f"Mejores {top_contratos} Contratos por Ticker {tipo_opcion_texto}\n"
                f"Filtrados por: Rentabilidad Anual >= {ALERTA_RENTABILIDAD_ANUAL}%, "
                f"Volatilidad Implícita >= {ALERTA_VOLATILIDAD_MINIMA}%\n"
                f"Basado en Rentabilidad Anual y Volatilidad se detectaron las siguientes oportunidades para los tickers: {ticker_list}\n"
@@ -232,7 +232,7 @@ def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identi
         if file_size > max_size_mb * 1024 * 1024:
             print(f"Error: El archivo Mejores_Contratos.txt ({file_size / (1024 * 1024):.2f} MB) excede el límite de {max_size_mb} MB para Discord.")
             mensaje = (f"Se encontraron contratos que cumplen los filtros de alerta.\n"
-                       f"Mejores 5 Contratos por Ticker {tipo_opcion_texto}\n"
+                       f"Mejores {top_contratos} Contratos por Ticker {tipo_opcion_texto}\n"
                        f"Basado en Rentabilidad Anual y Volatilidad se detectaron las siguientes oportunidades para los tickers: {ticker_list}\n"
                        f"El archivo Mejores_Contratos.txt es demasiado grande ({file_size / (1024 * 1024):.2f} MB) para enviarse a Discord.\n"
                        f"Revisa los artifacts en GitHub Actions para descargar el archivo.")
@@ -244,7 +244,7 @@ def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identi
     except FileNotFoundError:
         print("Error: No se encontró el archivo Mejores_Contratos.txt.")
         mensaje = (f"Se encontraron contratos que cumplen los filtros de alerta.\n"
-                   f"Mejores 5 Contratos por Ticker {tipo_opcion_texto}\n"
+                   f"Mejores {top_contratos} Contratos por Ticker {tipo_opcion_texto}\n"
                    f"Basado en Rentabilidad Anual y Volatilidad se detectaron las siguientes oportunidades para los tickers: {ticker_list}\n"
                    f"No se encontró el archivo Mejores_Contratos.txt para enviar a Discord.\n"
                    f"Revisa los logs para más detalles.")
@@ -491,7 +491,7 @@ def analizar_opciones():
         for opcion in todas_las_opciones:
             opciones_por_ticker[opcion['ticker']].append(opcion)
 
-        # Seleccionar los 5 mejores contratos por ticker y aplicar reglas de alerta
+        # Seleccionar los mejores contratos por ticker y aplicar reglas de alerta
         mejores_contratos_por_ticker = []
         for ticker, opciones in opciones_por_ticker.items():
             if opciones:
@@ -506,12 +506,12 @@ def analizar_opciones():
                     if (opcion['rentabilidad_anual'] >= ALERTA_RENTABILIDAD_ANUAL and 
                         opcion['volatilidad_implícita'] >= ALERTA_VOLATILIDAD_MINIMA)
                 ]
-                # Tomar los 5 mejores (o menos si no hay suficientes que cumplan las alertas)
-                mejores_5 = opciones_filtradas_alerta[:5]
-                mejores_contratos_por_ticker.extend(mejores_5)
+                # Tomar los mejores contratos según TOP_CONTRATOS (o menos si no hay suficientes que cumplan las alertas)
+                mejores_n = opciones_filtradas_alerta[:TOP_CONTRATOS]
+                mejores_contratos_por_ticker.extend(mejores_n)
 
                 # Preparar datos para la tabla y el CSV
-                for opcion in mejores_5:
+                for opcion in mejores_n:
                     mejores_contratos_df.append([
                         opcion['ticker'],
                         f"${opcion['strike']:.2f}",
@@ -537,27 +537,8 @@ def analizar_opciones():
             print(f"Tickers identificados como oportunidades: {ticker_list}")
 
             tipo_opcion_texto = "Out of the Money" if FILTRO_TIPO_OPCION == "OTM" else "In the Money" if FILTRO_TIPO_OPCION == "ITM" else "Todas"
-            contenido_mejores = f"Mejores 5 Contratos por Ticker {tipo_opcion_texto} (Mayor Rentabilidad Anual, Menor Tiempo, Mayor Diferencia %):\n"
+            contenido_mejores = f"Mejores {TOP_CONTRATOS} Contratos por Ticker {tipo_opcion_texto} (Mayor Rentabilidad Anual, Menor Tiempo, Mayor Diferencia %):\n"
             contenido_mejores += f"Filtrados por: Rentabilidad Anual >= {ALERTA_RENTABILIDAD_ANUAL}%, Volatilidad Implícita >= {ALERTA_VOLATILIDAD_MINIMA}%\n{'='*50}\n"
-
-            tabla_mejores = []
-            for opcion in mejores_contratos_por_ticker:
-                tabla_mejores.append([
-                    opcion['ticker'],
-                    f"${opcion['strike']:.2f}",
-                    f"${opcion['lastPrice']:.2f}",
-                    f"${opcion['bid']:.2f}",
-                    opcion['vencimiento'],
-                    opcion['dias_vencimiento'],
-                    f"{opcion['rentabilidad_diaria']:.2f}%",
-                    f"{opcion['rentabilidad_anual']:.2f}%",
-                    f"${opcion['break_even']:.2f}",
-                    f"{opcion['diferencia_porcentual']:.2f}%",
-                    f"{opcion['volatilidad_implícita']:.2f}%",
-                    opcion['volumen'],
-                    opcion['open_interest'],
-                    opcion['source']
-                ])
 
             headers_mejores = [
                 "Ticker",
@@ -576,8 +557,37 @@ def analizar_opciones():
                 "Fuente"
             ]
 
-            tabla = tabulate(tabla_mejores, headers=headers_mejores, tablefmt="grid")
-            contenido_mejores += f"\n{tabla}\n"
+            # Agrupar contratos por ticker para una mejor presentación
+            contratos_por_ticker = {}
+            for opcion in mejores_contratos_por_ticker:
+                ticker = opcion['ticker']
+                if ticker not in contratos_por_ticker:
+                    contratos_por_ticker[ticker] = []
+                contratos_por_ticker[ticker].append(opcion)
+
+            # Generar tabla por ticker
+            for ticker, contratos in contratos_por_ticker.items():
+                contenido_mejores += f"\nTicker: {ticker}\n{'-'*30}\n"
+                tabla_mejores = []
+                for opcion in contratos:
+                    tabla_mejores.append([
+                        opcion['ticker'],
+                        f"${opcion['strike']:.2f}",
+                        f"${opcion['lastPrice']:.2f}",
+                        f"${opcion['bid']:.2f}",
+                        opcion['vencimiento'],
+                        opcion['dias_vencimiento'],
+                        f"{opcion['rentabilidad_diaria']:.2f}%",
+                        f"{opcion['rentabilidad_anual']:.2f}%",
+                        f"${opcion['break_even']:.2f}",
+                        f"{opcion['diferencia_porcentual']:.2f}%",
+                        f"{opcion['volatilidad_implícita']:.2f}%",
+                        opcion['volumen'],
+                        opcion['open_interest'],
+                        opcion['source']
+                    ])
+                tabla = tabulate(tabla_mejores, headers=headers_mejores, tablefmt="grid")
+                contenido_mejores += f"{tabla}\n"
 
             # Guardar en Mejores_Contratos.txt
             with open("Mejores_Contratos.txt", "w") as f:
