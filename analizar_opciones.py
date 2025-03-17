@@ -119,6 +119,7 @@ def obtener_opciones_yahoo(stock):
                 opciones_put.append({
                     "strike": float(put["strike"]),
                     "lastPrice": float(put["lastPrice"]),
+                    "bid": float(put.get("bid", 0) or 0),  # Nuevo campo: Bid
                     "expirationDate": fecha,
                     "volume": put.get("volume", 0) or 0,
                     "impliedVolatility": (put.get("impliedVolatility", 0) or 0) * 100,
@@ -145,6 +146,7 @@ def obtener_opciones_finnhub(ticker):
                 opciones_put.append({
                     "strike": float(option["strike"]),
                     "lastPrice": float(option.get("last", 0) or 0),
+                    "bid": float(option.get("bid", 0) or 0),  # Nuevo campo: Bid
                     "expirationDate": fecha,
                     "volume": option.get("volume", 0) or 0,
                     "impliedVolatility": (option.get("impliedVolatility", 0) or 0) * 100,
@@ -224,6 +226,7 @@ def enviar_notificacion_discord(mejores_opciones, tipo_opcion_texto, top_contrat
         mensaje = f"Se encontraron opciones que cumplen los filtros.\n\nMejores {top_contratos} Contratos {tipo_opcion_texto} - Contratos {inicio}-{fin}:\n"
         for opcion in grupo_opciones:
             mensaje += (f"- {opcion['ticker']} | Strike: ${opcion['strike']:.2f} | "
+                       f"Precio PUT: ${opcion['precio_put']:.2f} | Bid: ${opcion['bid']:.2f} | "
                        f"Rent. Anual: {opcion['rentabilidad_anual']:.2f}% | "
                        f"Volatilidad: {opcion['volatilidad_implícita']:.2f}%\n")
         mensaje += "\nPara detalles completos, revisa los archivos CSV en el repositorio."
@@ -341,6 +344,7 @@ def analizar_opciones():
                             "ticker": ticker,
                             "strike": strike,
                             "precio_put": precio_put,
+                            "bid": contrato["bid"],  # Nuevo campo: Bid
                             "vencimiento": vencimiento_str,
                             "dias_vencimiento": dias_vencimiento,
                             "rentabilidad_diaria": rent_diaria,
@@ -359,6 +363,7 @@ def analizar_opciones():
                             ticker,
                             f"${strike:.2f}",
                             f"${precio_put:.2f}",
+                            f"${contrato['bid']:.2f}",  # Nuevo campo: Bid
                             vencimiento_str,
                             dias_vencimiento,
                             f"{rent_diaria:.2f}%",
@@ -381,6 +386,7 @@ def analizar_opciones():
                         tabla_datos.append([
                             f"${opcion['strike']:.2f}",
                             f"${opcion['precio_put']:.2f}",
+                            f"${opcion['bid']:.2f}",  # Nuevo campo: Bid
                             opcion['vencimiento'],
                             opcion['dias_vencimiento'],
                             f"{opcion['rentabilidad_diaria']:.2f}%",
@@ -396,6 +402,7 @@ def analizar_opciones():
                     headers = [
                         "Strike",
                         "Precio PUT",
+                        "Bid",  # Nuevo campo
                         "Vencimiento",
                         "Días Venc.",
                         "Rent. Diaria",
@@ -434,6 +441,7 @@ def analizar_opciones():
                 "Ticker",
                 "Strike",
                 "Precio PUT",
+                "Bid",  # Nuevo campo
                 "Vencimiento",
                 "Días Venc.",
                 "Rent. Diaria",
@@ -467,6 +475,7 @@ def analizar_opciones():
                     opcion['ticker'],
                     f"${opcion['strike']:.2f}",
                     f"${opcion['precio_put']:.2f}",
+                    f"${opcion['bid']:.2f}",  # Nuevo campo: Bid
                     opcion['vencimiento'],
                     opcion['dias_vencimiento'],
                     f"{opcion['rentabilidad_diaria']:.2f}%",
@@ -483,6 +492,7 @@ def analizar_opciones():
                     opcion['ticker'],
                     f"${opcion['strike']:.2f}",
                     f"${opcion['precio_put']:.2f}",
+                    f"${opcion['bid']:.2f}",  # Nuevo campo: Bid
                     opcion['vencimiento'],
                     opcion['dias_vencimiento'],
                     f"{opcion['rentabilidad_diaria']:.2f}%",
@@ -499,6 +509,7 @@ def analizar_opciones():
                 "Ticker",
                 "Strike",
                 "Precio PUT",
+                "Bid",  # Nuevo campo
                 "Vencimiento",
                 "Días Venc.",
                 "Rent. Diaria",
