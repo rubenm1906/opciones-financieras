@@ -11,6 +11,7 @@ DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1350463523196768356/ePmW
 
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
+ENVIAR_NOTIFICACION_MANUAL = False  # Cambia a True para forzar la notificación manualmente
 
 # Configuraciones por defecto (ajustables manualmente)
 DEFAULT_CONFIG = {
@@ -282,9 +283,16 @@ def analizar_opciones():
     SCRIPT_EJECUTADO = True
 
     # Obtener configuración desde variables de entorno con valores por defecto del script
-    (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
-     MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
-     FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_VOLATILIDAD_MINIMA) = obtener_configuracion()
+    try:
+        (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
+         MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
+         FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_VOLATILIDAD_MINIMA) = obtener_configuracion()
+    except Exception as e:
+        error_msg = f"Error al obtener la configuración: {e}\n"
+        print(error_msg)
+        with open("resultados.txt", "w") as f:
+            f.write(error_msg)
+        return  # Terminar ejecución si falla la configuración
 
     # Detectar si es una ejecución manual o automática
     es_ejecucion_manual = os.getenv("GITHUB_EVENT_NAME", "schedule") == "workflow_dispatch"
@@ -459,28 +467,40 @@ def analizar_opciones():
                 print(error_msg)
                 continue
 
+        # Guardar resultados.txt antes de procesar más datos
+        with open("resultados.txt", "w") as f:
+            f.write(resultado)
+        print("Archivo resultados.txt generado.")
+
+        # Generar todas_las_opciones.csv (incluso si está vacío)
+        headers_csv = [
+            "Ticker",
+            "Strike",
+            "Last Closed",
+            "Bid",
+            "Vencimiento",
+            "Días Venc.",
+            "Rent. Diaria",
+            "Rent. Anual",
+            "Break-even",
+            "Dif. % (Suby.-Break.)",
+            "Volatilidad Implícita",
+            "Volumen",
+            "Interés Abierto",
+            "Fuente"
+        ]
         if todas_las_opciones_df:
-            headers_csv = [
-                "Ticker",
-                "Strike",
-                "Last Closed",
-                "Bid",
-                "Vencimiento",
-                "Días Venc.",
-                "Rent. Diaria",
-                "Rent. Anual",
-                "Break-even",
-                "Dif. % (Suby.-Break.)",
-                "Volatilidad Implícita",
-                "Volumen",
-                "Interés Abierto",
-                "Fuente"
-            ]
+            print(f"Total de opciones filtradas (todos los tickers): {len(todas_las_opciones)}")
             df_todas = pd.DataFrame(todas_las_opciones_df, columns=headers_csv)
             df_todas.to_csv("todas_las_opciones.csv", index=False)
             print("Todas las opciones exportadas a 'todas_las_opciones.csv'.")
+        else:
+            print("No se encontraron opciones que cumplan los filtros. Generando todas_las_opciones.csv vacío.")
+            df_todas = pd.DataFrame(columns=headers_csv)
+            df_todas.to_csv("todas_las_opciones.csv", index=False)
+            print("Archivo todas_las_opciones.csv generado (vacío).")
 
-        print(f"Total de opciones filtradas (todos los tickers): {len(todas_las_opciones)}")
+        # Seleccionar los mejores contratos por ticker y aplicar reglas de alerta
         mejores_contratos_df = []
 
         # Diccionario para almacenar opciones filtradas por ticker
@@ -492,7 +512,7 @@ def analizar_opciones():
         for opcion in todas_las_opciones:
             opciones_por_ticker[opcion['ticker']].append(opcion)
 
-        # Seleccionar los mejores contratos por ticker y aplicar reglas de alerta
+        # Seleccionar los mejores contratos por ticker
         mejores_contratos_por_ticker = []
         for ticker, opciones in opciones_por_ticker.items():
             if opciones:
@@ -530,7 +550,23 @@ def analizar_opciones():
                         opcion['source']
                     ])
 
-        # Generar Mejores_Contratos.txt
+        # Generar Mejores_Contratos.txt y mejores_contratos.csv
+        headers_mejores = [
+            "Ticker",
+            "Strike",
+            "Last Closed",
+            "Bid",
+            "Vencimiento",
+            "Días Venc.",
+            "Rent. Diaria",
+            "Rent. Anual",
+            "Break-even",
+            "Dif. % (Suby.-Break.)",
+            "Volatilidad Implícita",
+            "Volumen",
+            "Interés Abierto",
+            "Fuente"
+        ]
         if mejores_contratos_por_ticker:
             # Extraer tickers únicos de los contratos seleccionados
             tickers_identificados = sorted(list(set([opcion['ticker'] for opcion in mejores_contratos_por_ticker])))
@@ -540,23 +576,6 @@ def analizar_opciones():
             tipo_opcion_texto = "Out of the Money" if FILTRO_TIPO_OPCION == "OTM" else "In the Money" if FILTRO_TIPO_OPCION == "ITM" else "Todas"
             contenido_mejores = f"Mejores {TOP_CONTRATOS} Contratos por Ticker {tipo_opcion_texto} (Mayor Rentabilidad Anual, Menor Tiempo, Mayor Diferencia %):\n"
             contenido_mejores += f"Filtrados por: Rentabilidad Anual >= {ALERTA_RENTABILIDAD_ANUAL}%, Volatilidad Implícita >= {ALERTA_VOLATILIDAD_MINIMA}%\n{'='*50}\n"
-
-            headers_mejores = [
-                "Ticker",
-                "Strike",
-                "Last Closed",
-                "Bid",
-                "Vencimiento",
-                "Días Venc.",
-                "Rent. Diaria",
-                "Rent. Anual",
-                "Break-even",
-                "Dif. % (Suby.-Break.)",
-                "Volatilidad Implícita",
-                "Volumen",
-                "Interés Abierto",
-                "Fuente"
-            ]
 
             # Agrupar contratos por ticker para una mejor presentación
             contratos_por_ticker = {}
@@ -595,27 +614,53 @@ def analizar_opciones():
                 f.write(contenido_mejores)
             print("Mejores contratos por ticker exportados a 'Mejores_Contratos.txt'.")
 
-            # También guardamos en mejores_contratos.csv
+            # Guardar en mejores_contratos.csv
             df_mejores = pd.DataFrame(mejores_contratos_df, columns=headers_mejores)
             df_mejores.to_csv("mejores_contratos.csv", index=False)
             print("Mejores contratos exportados a 'mejores_contratos.csv'.")
 
-            # Enviar a Discord si no es ejecución manual O si se fuerza la notificación
-            if not es_ejecucion_manual or force_discord:
+            # Enviar a Discord si no es ejecución manual O si se fuerza la notificación O si se activa manualmente
+            if not es_ejecucion_manual or force_discord or ENVIAR_NOTIFICACION_MANUAL:
                 enviar_notificacion_discord(tipo_opcion_texto, TOP_CONTRATOS, tickers_identificados)
 
         else:
-            resultado += f"\nNo se encontraron contratos que cumplan las reglas de alerta en ningún ticker.\n"
             print("No se encontraron contratos que cumplan las reglas de alerta en ningún ticker.")
-
-        with open("resultados.txt", "w") as f:
-            f.write(resultado)
+            # Generar mejores_contratos.csv vacío
+            df_mejores = pd.DataFrame(columns=headers_mejores)
+            df_mejores.to_csv("mejores_contratos.csv", index=False)
+            print("Archivo mejores_contratos.csv generado (vacío).")
 
     except Exception as e:
         error_msg = f"Error general: {e}\n"
         print(error_msg)
+        resultado += error_msg
         with open("resultados.txt", "w") as f:
-            f.write(error_msg)
+            f.write(resultado)
+
+        # Generar archivos vacíos para evitar problemas con los artefactos
+        headers_csv = [
+            "Ticker",
+            "Strike",
+            "Last Closed",
+            "Bid",
+            "Vencimiento",
+            "Días Venc.",
+            "Rent. Diaria",
+            "Rent. Anual",
+            "Break-even",
+            "Dif. % (Suby.-Break.)",
+            "Volatilidad Implícita",
+            "Volumen",
+            "Interés Abierto",
+            "Fuente"
+        ]
+        df_todas = pd.DataFrame(columns=headers_csv)
+        df_todas.to_csv("todas_las_opciones.csv", index=False)
+        print("Archivo todas_las_opciones.csv generado (vacío debido a error).")
+
+        df_mejores = pd.DataFrame(columns=headers_csv)
+        df_mejores.to_csv("mejores_contratos.csv", index=False)
+        print("Archivo mejores_contratos.csv generado (vacío debido a error).")
 
 if __name__ == "__main__":
     analizar_opciones()
