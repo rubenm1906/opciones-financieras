@@ -216,13 +216,13 @@ def calcular_diferencia_porcentual(precio_subyacente, break_even):
     """Calcula la diferencia porcentual entre el subyacente y el break-even."""
     return ((precio_subyacente - break_even) / precio_subyacente) * 100
 
-def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identificados):
+def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identificados, alerta_rentabilidad_anual, alerta_volatilidad_minima):
     """Envía el archivo Mejores_Contratos.txt a Discord como un adjunto y menciona los tickers identificados."""
     ticker_list = ", ".join(tickers_identificados) if tickers_identificados else "Ninguno"
     mensaje = (f"Se encontraron contratos que cumplen los filtros de alerta.\n"
                f"Mejores {top_contratos} Contratos por Ticker {tipo_opcion_texto}\n"
-               f"Filtrados por: Rentabilidad Anual >= {ALERTA_RENTABILIDAD_ANUAL}%, "
-               f"Volatilidad Implícita >= {ALERTA_VOLATILIDAD_MINIMA}%\n"
+               f"Filtrados por: Rentabilidad Anual >= {alerta_rentabilidad_anual}%, "
+               f"Volatilidad Implícita >= {alerta_volatilidad_minima}%\n"
                f"Basado en Rentabilidad Anual y Volatilidad se detectaron las siguientes oportunidades para los tickers: {ticker_list}\n"
                f"Revisa el archivo adjunto para los detalles completos.")
 
@@ -621,7 +621,7 @@ def analizar_opciones():
 
             # Enviar a Discord si no es ejecución manual O si se fuerza la notificación O si se activa manualmente
             if not es_ejecucion_manual or force_discord or ENVIAR_NOTIFICACION_MANUAL:
-                enviar_notificacion_discord(tipo_opcion_texto, TOP_CONTRATOS, tickers_identificados)
+                enviar_notificacion_discord(tipo_opcion_texto, TOP_CONTRATOS, tickers_identificados, ALERTA_RENTABILIDAD_ANUAL, ALERTA_VOLATILIDAD_MINIMA)
 
         else:
             print("No se encontraron contratos que cumplan las reglas de alerta en ningún ticker.")
