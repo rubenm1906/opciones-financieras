@@ -25,7 +25,8 @@ DEFAULT_CONFIG = {
     "FILTRO_TIPO_OPCION": "OTM",
     "TOP_CONTRATOS": 5,
     "ALERTA_RENTABILIDAD_ANUAL": 50.0,
-    "ALERTA_VOLATILIDAD_MINIMA": 50.0
+    "ALERTA_VOLATILIDAD_MINIMA": 50.0,
+    "MIN_BID": 0.99  # Nueva variable para excluir bids menores a 0.99
 }
 
 # Clave API de Finnhub
@@ -92,9 +93,14 @@ def obtener_configuracion():
     ALERTA_VOLATILIDAD_MINIMA = DEFAULT_CONFIG["ALERTA_VOLATILIDAD_MINIMA"]
     print(f"ALERTA_VOLATILIDAD_MINIMA: {ALERTA_VOLATILIDAD_MINIMA}")
 
+    # MIN_BID (nueva variable)
+    min_bid_env = os.getenv("MIN_BID", str(DEFAULT_CONFIG["MIN_BID"]))
+    MIN_BID = float(min_bid_env) if min_bid_env else DEFAULT_CONFIG["MIN_BID"]
+    print(f"MIN_BID: {MIN_BID}")
+
     return (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
             MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
-            FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_VOLATILIDAD_MINIMA)
+            FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_VOLATILIDAD_MINIMA, MIN_BID)
 
 def obtener_datos_subyacente(ticker):
     """Obtiene el precio del subyacente, mínimo y máximo de 52 semanas."""
@@ -273,7 +279,7 @@ def analizar_opciones():
     try:
         (TICKERS, MIN_RENTABILIDAD_ANUAL, MAX_DIAS_VENCIMIENTO, MIN_DIFERENCIA_PORCENTUAL,
          MIN_VOLUMEN, MIN_VOLATILIDAD_IMPLÍCITA, MIN_OPEN_INTEREST,
-         FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_VOLATILIDAD_MINIMA) = obtener_configuracion()
+         FILTRO_TIPO_OPCION, TOP_CONTRATOS, ALERTA_RENTABILIDAD_ANUAL, ALERTA_VOLATILIDAD_MINIMA, MIN_BID) = obtener_configuracion()
     except Exception as e:
         error_msg = f"Error al obtener la configuración: {e}\n"
         print(error_msg)
@@ -297,6 +303,7 @@ def analizar_opciones():
         f"Mínimo volumen: {MIN_VOLUMEN}\n"
         f"Volatilidad implícita mínima: {MIN_VOLATILIDAD_IMPLÍCITA}%\n"
         f"Mínimo interés abierto: {MIN_OPEN_INTEREST}\n"
+        f"Mínimo bid: ${MIN_BID}\n"  # Nueva línea para MIN_BID
         f"{'='*50}\n\n"
     )
 
@@ -335,6 +342,7 @@ def analizar_opciones():
                     volumen = contrato["volume"]
                     volatilidad_implícita = contrato["impliedVolatility"]
                     open_interest = contrato["openInterest"]
+                    bid = contrato["bid"]
                     source = contrato["source"]
 
                     if FILTRO_TIPO_OPCION == "OTM":
@@ -352,6 +360,8 @@ def analizar_opciones():
                         continue
                     if open_interest < MIN_OPEN_INTEREST:
                         continue
+                    if bid < MIN_BID:  # Nuevo filtro para excluir bids menores a MIN_BID
+                        continue
 
                     rent_diaria, rent_anual = calcular_rentabilidad(precio_put, precio_subyacente, dias_vencimiento)
                     break_even = calcular_break_even(strike, precio_put)
@@ -362,7 +372,7 @@ def analizar_opciones():
                             "ticker": ticker,
                             "strike": strike,
                             "lastPrice": precio_put,
-                            "bid": contrato["bid"],
+                            "bid": bid,
                             "vencimiento": vencimiento_str,
                             "dias_vencimiento": dias_vencimiento,
                             "rentabilidad_diaria": rent_diaria,
@@ -381,7 +391,7 @@ def analizar_opciones():
                             ticker,
                             f"${strike:.2f}",
                             f"${precio_put:.2f}",
-                            f"${contrato['bid']:.2f}",
+                            f"${bid:.2f}",
                             vencimiento_str,
                             dias_vencimiento,
                             f"{rent_diaria:.2f}%",
@@ -396,7 +406,7 @@ def analizar_opciones():
 
                 if opciones_filtradas:
                     tipo_opcion_texto = "Out of the Money" if FILTRO_TIPO_OPCION == "OTM" else "In the Money" if FILTRO_TIPO_OPCION == "ITM" else "Todas"
-                    resultado += f"\nOpciones PUT {tipo_opcion_texto} con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}, volatilidad >= {MIN_VOLATILIDAD_IMPLÍCITA}%, interés abierto > {MIN_OPEN_INTEREST}):\n"
+                    resultado += f"\nOpciones PUT {tipo_opcion_texto} con rentabilidad anual > {MIN_RENTABILIDAD_ANUAL}% y diferencia % > {MIN_DIFERENCIA_PORCENTUAL}% (máximo {MAX_DIAS_VENCIMIENTO} días, volumen > {MIN_VOLUMEN}, volatilidad >= {MIN_VOLATILIDAD_IMPLÍCITA}%, interés abierto > {MIN_OPEN_INTEREST}, bid >= ${MIN_BID}):\n"  # Actualizado con MIN_BID
                     print(f"Se encontraron {len(opciones_filtradas)} opciones que cumplen los filtros para {ticker}")
                     
                     tabla_datos = []
