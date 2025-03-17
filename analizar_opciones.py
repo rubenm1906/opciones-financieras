@@ -10,7 +10,7 @@ import time
 DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1350463523196768356/ePmWnO2XWnfD582oMAr2WzqSFs7ZxU1ApRYi1bz8PiSbZE5zAcR7ZoOD8SPVofxA9UUW"
 
 # Variable para evitar ejecuciones múltiples
-SCRIPT_EJECUTADO = True
+SCRIPT_EJECUTADO = False
 
 # Configuraciones por defecto (ajustables manualmente)
 DEFAULT_CONFIG = {
