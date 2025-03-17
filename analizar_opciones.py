@@ -11,7 +11,7 @@ DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1350463523196768356/ePmW
 
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
-ENVIAR_NOTIFICACION_MANUAL = False  # Cambia a True para forzar la notificación manualmente
+ENVIAR_NOTIFICACION_MANUAL = True  # Cambia a True para forzar la notificación manualmente
 
 # Configuraciones por defecto (ajustables manualmente)
 DEFAULT_CONFIG = {
@@ -219,12 +219,7 @@ def calcular_diferencia_porcentual(precio_subyacente, break_even):
 def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identificados, alerta_rentabilidad_anual, alerta_volatilidad_minima):
     """Envía el archivo Mejores_Contratos.txt a Discord como un adjunto y menciona los tickers identificados."""
     ticker_list = ", ".join(tickers_identificados) if tickers_identificados else "Ninguno"
-    mensaje = (f"Se encontraron contratos que cumplen los filtros de alerta.\n"
-               f"Mejores {top_contratos} Contratos por Ticker {tipo_opcion_texto}\n"
-               f"Filtrados por: Rentabilidad Anual >= {alerta_rentabilidad_anual}%, "
-               f"Volatilidad Implícita >= {alerta_volatilidad_minima}%\n"
-               f"Basado en Rentabilidad Anual y Volatilidad se detectaron las siguientes oportunidades para los tickers: {ticker_list}\n"
-               f"Revisa el archivo adjunto para los detalles completos.")
+    mensaje = f"Se encontraron contratos que cumplen los filtros de alerta para los siguientes tickers: {ticker_list}"
 
     # Verificar el tamaño del archivo Mejores_Contratos.txt
     try:
@@ -232,11 +227,7 @@ def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identi
         max_size_mb = 8  # Límite de 8 MB para Discord (ajusta según el nivel de boost de tu servidor)
         if file_size > max_size_mb * 1024 * 1024:
             print(f"Error: El archivo Mejores_Contratos.txt ({file_size / (1024 * 1024):.2f} MB) excede el límite de {max_size_mb} MB para Discord.")
-            mensaje = (f"Se encontraron contratos que cumplen los filtros de alerta.\n"
-                       f"Mejores {top_contratos} Contratos por Ticker {tipo_opcion_texto}\n"
-                       f"Basado en Rentabilidad Anual y Volatilidad se detectaron las siguientes oportunidades para los tickers: {ticker_list}\n"
-                       f"El archivo Mejores_Contratos.txt es demasiado grande ({file_size / (1024 * 1024):.2f} MB) para enviarse a Discord.\n"
-                       f"Revisa los artifacts en GitHub Actions para descargar el archivo.")
+            mensaje = f"Se encontraron contratos que cumplen los filtros de alerta para los siguientes tickers: {ticker_list}\nEl archivo Mejores_Contratos.txt es demasiado grande ({file_size / (1024 * 1024):.2f} MB) para enviarse a Discord.\nRevisa los artifacts en GitHub Actions para descargar el archivo."
             payload = {"content": mensaje}
             response = requests.post(DISCORD_WEBHOOK_URL, json=payload)
             response.raise_for_status()
@@ -244,11 +235,7 @@ def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identi
             return
     except FileNotFoundError:
         print("Error: No se encontró el archivo Mejores_Contratos.txt.")
-        mensaje = (f"Se encontraron contratos que cumplen los filtros de alerta.\n"
-                   f"Mejores {top_contratos} Contratos por Ticker {tipo_opcion_texto}\n"
-                   f"Basado en Rentabilidad Anual y Volatilidad se detectaron las siguientes oportunidades para los tickers: {ticker_list}\n"
-                   f"No se encontró el archivo Mejores_Contratos.txt para enviar a Discord.\n"
-                   f"Revisa los logs para más detalles.")
+        mensaje = f"Se encontraron contratos que cumplen los filtros de alerta para los siguientes tickers: {ticker_list}\nNo se encontró el archivo Mejores_Contratos.txt para enviar a Discord.\nRevisa los logs para más detalles."
         payload = {"content": mensaje}
         response = requests.post(DISCORD_WEBHOOK_URL, json=payload)
         response.raise_for_status()
@@ -574,8 +561,7 @@ def analizar_opciones():
             print(f"Tickers identificados como oportunidades: {ticker_list}")
 
             tipo_opcion_texto = "Out of the Money" if FILTRO_TIPO_OPCION == "OTM" else "In the Money" if FILTRO_TIPO_OPCION == "ITM" else "Todas"
-            contenido_mejores = f"Mejores {TOP_CONTRATOS} Contratos por Ticker {tipo_opcion_texto} (Mayor Rentabilidad Anual, Menor Tiempo, Mayor Diferencia %):\n"
-            contenido_mejores += f"Filtrados por: Rentabilidad Anual >= {ALERTA_RENTABILIDAD_ANUAL}%, Volatilidad Implícita >= {ALERTA_VOLATILIDAD_MINIMA}%\n{'='*50}\n"
+            contenido_mejores = f"Mejores Contratos por Ticker (Mayor Rentabilidad Anual, Menor Tiempo, Mayor Diferencia %):\n{'='*50}\n"
 
             # Agrupar contratos por ticker para una mejor presentación
             contratos_por_ticker = {}
