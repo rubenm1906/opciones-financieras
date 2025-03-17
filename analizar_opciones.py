@@ -22,7 +22,7 @@ DEFAULT_CONFIG = {
     "MIN_VOLATILIDAD_IMPLÍCITA": 35.0,
     "MIN_OPEN_INTEREST": 1,
     "FILTRO_TIPO_OPCION": "OTM",
-    "TOP_CONTRATOS": 5,  # Cambiado de 10 a 5 como valor por defecto
+    "TOP_CONTRATOS": 5,
     "ALERTA_RENTABILIDAD_ANUAL": 50.0,
     "ALERTA_VOLATILIDAD_MINIMA": 50.0
 }
@@ -288,7 +288,8 @@ def analizar_opciones():
 
     # Detectar si es una ejecución manual o automática
     es_ejecucion_manual = os.getenv("GITHUB_EVENT_NAME", "schedule") == "workflow_dispatch"
-    print(f"Es ejecución manual: {es_ejecucion_manual}")
+    force_discord = os.getenv("FORCE_DISCORD_NOTIFICATION", "false").lower() == "true"
+    print(f"Es ejecución manual: {es_ejecucion_manual}, Forzar notificación Discord: {force_discord}")
 
     # Resumen de condiciones para el archivo .txt
     resumen_condiciones = (
@@ -599,8 +600,8 @@ def analizar_opciones():
             df_mejores.to_csv("mejores_contratos.csv", index=False)
             print("Mejores contratos exportados a 'mejores_contratos.csv'.")
 
-            # Enviar a Discord si no es ejecución manual
-            if not es_ejecucion_manual:
+            # Enviar a Discord si no es ejecución manual O si se fuerza la notificación
+            if not es_ejecucion_manual or force_discord:
                 enviar_notificacion_discord(tipo_opcion_texto, TOP_CONTRATOS, tickers_identificados)
 
         else:
