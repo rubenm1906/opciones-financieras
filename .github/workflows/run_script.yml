@@ -71,7 +71,7 @@ jobs:
           TOP_CONTRATOS: ${{ github.event.inputs.TOP_CONTRATOS || '5' }}
           FORCE_DISCORD_NOTIFICATION: ${{ github.event.inputs.FORCE_DISCORD_NOTIFICATION || 'false' }}
           MIN_BID: ${{ github.event.inputs.MIN_BID || '0.99' }}
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}  # Asegura que el secreto se pase
         run: |
           python analizar_opciones.py
 
