@@ -2,7 +2,7 @@ name: Analizar Opciones
 
 on:
   schedule:
-    - cron: '0 13 * * *'  # Ejecuta diariamente a las 13:00 UTC
+    - cron: '0 12,15,18,21 * * *'  # Ejecuta a las 12:00, 15:00, 18:00 y 21:00 UTC
   workflow_dispatch:
     inputs:
       TICKERS:
@@ -21,7 +21,7 @@ on:
         description: 'Mínima diferencia porcentual (%)'
         required: false
         default: '5.0'
-      MIN_VOLATILIDAD_IMPLICITA:  # Cambiado de MIN_VOLATILIDAD_IMPLÍCITA a MIN_VOLATILIDAD_IMPLICITA
+      MIN_VOLATILIDAD_IMPLICITA:
         description: 'Mínima volatilidad implícita (%)'
         required: false
         default: '35.0'
@@ -62,15 +62,15 @@ jobs:
 
       - name: Ejecutar script de análisis de opciones
         env:
-          TICKERS: ${{ github.event.inputs.TICKERS }}
-          MIN_RENTABILIDAD_ANUAL: ${{ github.event.inputs.MIN_RENTABILIDAD_ANUAL }}
-          MAX_DIAS_VENCIMIENTO: ${{ github.event.inputs.MAX_DIAS_VENCIMIENTO }}
-          MIN_DIFERENCIA_PORCENTUAL: ${{ github.event.inputs.MIN_DIFERENCIA_PORCENTUAL }}
-          MIN_VOLATILIDAD_IMPLÍCITA: ${{ github.event.inputs.MIN_VOLATILIDAD_IMPLICITA }}  # Cambiado a MIN_VOLATILIDAD_IMPLICITA
-          FILTRO_TIPO_OPCION: ${{ github.event.inputs.FILTRO_TIPO_OPCION }}
-          TOP_CONTRATOS: ${{ github.event.inputs.TOP_CONTRATOS }}
-          FORCE_DISCORD_NOTIFICATION: ${{ github.event.inputs.FORCE_DISCORD_NOTIFICATION }}
-          MIN_BID: ${{ github.event.inputs.MIN_BID }}
+          TICKERS: ${{ github.event.inputs.TICKERS || 'NA9.DE,TEP.PA,GOOGL,EPAM,NFE,GLNG,GLOB,NVDA' }}
+          MIN_RENTABILIDAD_ANUAL: ${{ github.event.inputs.MIN_RENTABILIDAD_ANUAL || '45.0' }}
+          MAX_DIAS_VENCIMIENTO: ${{ github.event.inputs.MAX_DIAS_VENCIMIENTO || '45' }}
+          MIN_DIFERENCIA_PORCENTUAL: ${{ github.event.inputs.MIN_DIFERENCIA_PORCENTUAL || '5.0' }}
+          MIN_VOLATILIDAD_IMPLICITA: ${{ github.event.inputs.MIN_VOLATILIDAD_IMPLICITA || '35.0' }}
+          FILTRO_TIPO_OPCION: ${{ github.event.inputs.FILTRO_TIPO_OPCION || 'OTM' }}
+          TOP_CONTRATOS: ${{ github.event.inputs.TOP_CONTRATOS || '5' }}
+          FORCE_DISCORD_NOTIFICATION: ${{ github.event.inputs.FORCE_DISCORD_NOTIFICATION || 'false' }}
+          MIN_BID: ${{ github.event.inputs.MIN_BID || '0.99' }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: |
           python analizar_opciones.py
