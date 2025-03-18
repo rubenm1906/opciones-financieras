@@ -7,11 +7,11 @@ import requests
 import time
 
 # Configuración para Discord
-DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1350463523196768356/ePmWnO2XWnfD582oMAr2WzqSFs7ZxU1ApRYi1bz8PiSbZE5zAcR7ZoOD8SPVofxA9UUW"
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "https://discord.com/api/webhooks/1350463523196768356/ePmWnO2XWnfD582oMAr2WzqSFs7ZxU1ApRYi1bz8PiSbZE5zAcR7ZoOD8SPVofxA9UUW")
 
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
-ENVIAR_NOTIFICACION_MANUAL = False  # Cambia a True/false para forzar la notificación manualmente
+ENVIAR_NOTIFICACION_MANUAL = False  # Cambia a True para forzar la notificación manualmente
 
 # Configuraciones por defecto (ajustables manualmente)
 DEFAULT_CONFIG = {
@@ -37,12 +37,13 @@ def obtener_configuracion():
     # TICKERS
     TICKERS = os.getenv("TICKERS", DEFAULT_CONFIG["TICKERS"])
     print(f"Valor de TICKERS desde os.getenv: {TICKERS}")
-    if not TICKERS:
-        raise ValueError("No se especificaron tickers válidos. Define TICKERS en las variables de entorno.")
+    if not TICKERS or not any(t.strip() for t in TICKERS.split(",")):
+        print("Advertencia: TICKERS está vacío o inválido. Usando valor por defecto.")
+        TICKERS = DEFAULT_CONFIG["TICKERS"]
     TICKERS = [t.strip() for t in TICKERS.split(",") if t.strip()]  # Eliminar espacios y elementos vacíos
     TICKERS = list(set(TICKERS))  # Eliminar duplicados
     if not TICKERS:
-        raise ValueError("La lista de tickers está vacía después de procesar.")
+        raise ValueError("La lista de tickers está vacía después de procesar, incluso con el valor por defecto.")
     print(f"Tickers procesados: {TICKERS}")
 
     # MIN_RENTABILIDAD_ANUAL
