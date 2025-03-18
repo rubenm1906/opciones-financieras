@@ -60,6 +60,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install yfinance pandas tabulate requests
 
+      - name: Depurar variables de entorno
+        run: |
+          echo "DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL}"
+          echo "TICKERS: ${TICKERS}"
+          echo "GITHUB_EVENT_NAME: ${GITHUB_EVENT_NAME}"
+          echo "FORCE_DISCORD_NOTIFICATION: ${FORCE_DISCORD_NOTIFICATION}"
+
       - name: Ejecutar script de análisis de opciones
         env:
           TICKERS: ${{ github.event.inputs.TICKERS || 'NA9.DE,TEP.PA,GOOGL,EPAM,NFE,GLNG,GLOB,NVDA' }}
