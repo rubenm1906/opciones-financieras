@@ -12,7 +12,7 @@ print(f"[DEBUG] Valor inicial de DISCORD_WEBHOOK_URL: {DISCORD_WEBHOOK_URL}")  #
 
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
-ENVIAR_NOTIFICACION_MANUAL = False  # Cambia a True para forzar la notificación manualmente
+ENVIAR_NOTIFICACION_MANUAL = True  # Cambia a True para forzar la notificación manualmente
 
 # Configuraciones por defecto (ajustables manualmente)
 DEFAULT_CONFIG = {
