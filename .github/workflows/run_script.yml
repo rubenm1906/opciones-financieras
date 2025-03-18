@@ -62,10 +62,10 @@ jobs:
 
       - name: Depurar variables de entorno
         run: |
-          echo "DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL}"
-          echo "TICKERS: ${TICKERS}"
-          echo "GITHUB_EVENT_NAME: ${GITHUB_EVENT_NAME}"
-          echo "FORCE_DISCORD_NOTIFICATION: ${FORCE_DISCORD_NOTIFICATION}"
+          echo "::debug::DISCORD_WEBHOOK_URL: ${DISCORD_WEBHOOK_URL}"
+          echo "::debug::TICKERS: ${TICKERS}"
+          echo "::debug::GITHUB_EVENT_NAME: ${GITHUB_EVENT_NAME}"
+          echo "::debug::FORCE_DISCORD_NOTIFICATION: ${FORCE_DISCORD_NOTIFICATION}"
 
       - name: Ejecutar script de análisis de opciones
         env:
@@ -80,7 +80,7 @@ jobs:
           MIN_BID: ${{ github.event.inputs.MIN_BID || '0.99' }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}  # Asegura que el secreto se pase
         run: |
-          python analizar_opciones.py
+          python analizar_opciones.py 2>&1 | tee output.log
 
       - name: Subir resultados como artefactos
         uses: actions/upload-artifact@v4
@@ -91,3 +91,4 @@ jobs:
             todas_las_opciones.csv
             Mejores_Contratos.txt
             mejores_contratos.csv
+            output.log  # Subir el log completo para revisión
