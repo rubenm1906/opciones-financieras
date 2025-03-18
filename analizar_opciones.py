@@ -12,7 +12,7 @@ print(f"[DEBUG] Valor inicial de DISCORD_WEBHOOK_URL: {DISCORD_WEBHOOK_URL}")  #
 
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
-ENVIAR_NOTIFICACION_MANUAL = True  # Cambia a True para forzar la notificación manualmente
+ENVIAR_NOTIFICACION_MANUAL = False  # Cambia a True para forzar la notificación manualmente
 
 # Configuraciones por defecto (ajustables manualmente)
 DEFAULT_CONFIG = {
@@ -35,7 +35,7 @@ FINNHUB_API_KEY = "cvbfudhr01qob7udcs1gcvbfudhr01qob7udcs20"
 
 def obtener_configuracion():
     """Obtiene la configuración desde variables de entorno con valores por defecto del script."""
-    print(f"[DEBUG] Obteniendo configuración - DISCORD_WEBHOOK_URL: {os.getenv('DISCORD_WEBHOOK_URL')}")  # Depuración
+    print(f"[DEBUG] Obteniendo configuración - DISCORD_WEBHOOK_URL desde os.getenv: {os.getenv('DISCORD_WEBHOOK_URL')}")  # Depuración
     # TICKERS
     TICKERS = os.getenv("TICKERS", DEFAULT_CONFIG["TICKERS"])
     print(f"Valor de TICKERS desde os.getenv: {TICKERS}")
@@ -645,7 +645,8 @@ def analizar_opciones():
             df_mejores.to_csv("mejores_contratos.csv", index=False)
             print("Mejores contratos exportados a 'mejores_contratos.csv'.")
 
-            # Enviar a Discord si no es ejecución manual O si se fuerza la notificación O si se activa manualmente
+            # Verificar y depurar antes de enviar a Discord
+            print(f"[DEBUG] Valor de DISCORD_WEBHOOK_URL antes de enviar: {DISCORD_WEBHOOK_URL}")
             if not es_ejecucion_manual or force_discord or ENVIAR_NOTIFICACION_MANUAL:
                 enviar_notificacion_discord(tipo_opcion_texto, TOP_CONTRATOS, tickers_identificados, ALERTA_RENTABILIDAD_ANUAL, ALERTA_VOLATILIDAD_MINIMA)
 
