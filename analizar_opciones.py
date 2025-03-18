@@ -6,13 +6,13 @@ import pandas as pd
 import requests
 import time
 
-# Configuración para Discord
-DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "https://discord.com/api/webhooks/1350463523196768356/ePmWnO2XWnfD582oMAr2WzqSFs7ZxU1ApRYi1bz8PiSbZE5zAcR7ZoOD8SPVofxA9UUW")
+# Configuración para Discord - Forzado directamente
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1350463523196768356/ePmWnO2XWnfD582oMAr2WzqSFs7ZxU1ApRYi1bz8PiSbZE5zAcR7ZoOD8SPVofxA9UUW"
 print(f"[DEBUG] Valor inicial de DISCORD_WEBHOOK_URL: {DISCORD_WEBHOOK_URL}")  # Depuración inicial
 
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
-ENVIAR_NOTIFICACION_MANUAL = False  # Cambia a True para forzar la notificación manualmente
+ENVIAR_NOTIFICACION_MANUAL = False  # Cambia a True/false para forzar la notificación manualmente
 
 # Configuraciones por defecto (ajustables manualmente)
 DEFAULT_CONFIG = {
@@ -35,17 +35,16 @@ FINNHUB_API_KEY = "cvbfudhr01qob7udcs1gcvbfudhr01qob7udcs20"
 
 def obtener_configuracion():
     """Obtiene la configuración desde variables de entorno con valores por defecto del script."""
-    print(f"[DEBUG] Obteniendo configuración - DISCORD_WEBHOOK_URL desde os.getenv: {os.getenv('DISCORD_WEBHOOK_URL')}")  # Depuración
+    print(f"[DEBUG] Configuración inicial - DISCORD_WEBHOOK_URL: {DISCORD_WEBHOOK_URL}")  # Depuración
     # TICKERS
     TICKERS = os.getenv("TICKERS", DEFAULT_CONFIG["TICKERS"])
     print(f"Valor de TICKERS desde os.getenv: {TICKERS}")
-    if not TICKERS or not any(t.strip() for t in TICKERS.split(",")):
-        print("Advertencia: TICKERS está vacío o inválido. Usando valor por defecto.")
-        TICKERS = DEFAULT_CONFIG["TICKERS"]
+    if not TICKERS:
+        raise ValueError("No se especificaron tickers válidos. Define TICKERS en las variables de entorno.")
     TICKERS = [t.strip() for t in TICKERS.split(",") if t.strip()]  # Eliminar espacios y elementos vacíos
     TICKERS = list(set(TICKERS))  # Eliminar duplicados
     if not TICKERS:
-        raise ValueError("La lista de tickers está vacía después de procesar, incluso con el valor por defecto.")
+        raise ValueError("La lista de tickers está vacía después de procesar.")
     print(f"Tickers procesados: {TICKERS}")
 
     # MIN_RENTABILIDAD_ANUAL
@@ -250,6 +249,7 @@ def calcular_diferencia_porcentual(precio_subyacente, break_even):
 
 def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identificados, alerta_rentabilidad_anual, alerta_volatilidad_minima):
     """Envía el archivo Mejores_Contratos.txt a Discord como un adjunto y menciona los tickers identificados."""
+    print(f"[DEBUG] Dentro de enviar_notificacion_discord - DISCORD_WEBHOOK_URL: {DISCORD_WEBHOOK_URL}")  # Depuración
     ticker_list = ", ".join(tickers_identificados) if tickers_identificados else "Ninguno"
     mensaje = f"Se encontraron contratos que cumplen los filtros de alerta para los siguientes tickers: {ticker_list}"
 
@@ -262,7 +262,7 @@ def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identi
     # Verificar el tamaño del archivo Mejores_Contratos.txt
     try:
         file_size = os.path.getsize("Mejores_Contratos.txt")
-        max_size_mb = 8  # Límite de 8 MB para Discord
+        max_size_mb = 8  # Límite de 8 MB para Discord (ajusta según el nivel de boost de tu servidor)
         if file_size > max_size_mb * 1024 * 1024:
             print(f"Error: El archivo Mejores_Contratos.txt ({file_size / (1024 * 1024):.2f} MB) excede el límite de {max_size_mb} MB para Discord.")
             mensaje = f"Se encontraron contratos que cumplen los filtros de alerta para los siguientes tickers: {ticker_list}\nEl archivo Mejores_Contratos.txt es demasiado grande ({file_size / (1024 * 1024):.2f} MB) para enviarse a Discord.\nRevisa los artifacts en GitHub Actions para descargar el archivo."
@@ -294,6 +294,8 @@ def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identi
             print("Archivo Mejores_Contratos.txt enviado a Discord exitosamente.")
     except requests.exceptions.RequestException as e:
         print(f"Error al enviar el archivo a Discord: {e}")
+        if 'response' in locals() and response.text:
+            print(f"Detalles del error: {response.text}")
 
 def analizar_opciones():
     global SCRIPT_EJECUTADO
@@ -652,20 +654,19 @@ def analizar_opciones():
 
         else:
             print("No se encontraron contratos que cumplan las reglas de alerta en ningún ticker.")
-            # Generar mejores_contratos.csv vacío solo si no existe
-            if not os.path.exists("mejores_contratos.csv"):
-                df_mejores = pd.DataFrame(columns=headers_mejores)
-                df_mejores.to_csv("mejores_contratos.csv", index=False)
-                print("Archivo mejores_contratos.csv generado (vacío).")
+            # Generar mejores_contratos.csv vacío
+            df_mejores = pd.DataFrame(columns=headers_mejores)
+            df_mejores.to_csv("mejores_contratos.csv", index=False)
+            print("Archivo mejores_contratos.csv generado (vacío).")
 
     except Exception as e:
         error_msg = f"Error general: {e}\n"
         print(error_msg)
         resultado += error_msg
-        with open("resultados.txt", "a") as f:  # Usar "a" para añadir en lugar de sobrescribir
-            f.write(error_msg)
+        with open("resultados.txt", "w") as f:
+            f.write(resultado)
 
-        # Generar archivos vacíos solo si no existen
+        # Generar archivos vacíos para evitar problemas con los artefactos
         headers_csv = [
             "Ticker",
             "Strike",
@@ -682,14 +683,13 @@ def analizar_opciones():
             "Interés Abierto",
             "Fuente"
         ]
-        if not os.path.exists("todas_las_opciones.csv"):
-            df_todas = pd.DataFrame(columns=headers_csv)
-            df_todas.to_csv("todas_las_opciones.csv", index=False)
-            print("Archivo todas_las_opciones.csv generado (vacío debido a error).")
-        if not os.path.exists("mejores_contratos.csv"):
-            df_mejores = pd.DataFrame(columns=headers_csv)
-            df_mejores.to_csv("mejores_contratos.csv", index=False)
-            print("Archivo mejores_contratos.csv generado (vacío debido a error).")
+        df_todas = pd.DataFrame(columns=headers_csv)
+        df_todas.to_csv("todas_las_opciones.csv", index=False)
+        print("Archivo todas_las_opciones.csv generado (vacío debido a error).")
+
+        df_mejores = pd.DataFrame(columns=headers_csv)
+        df_mejores.to_csv("mejores_contratos.csv", index=False)
+        print("Archivo mejores_contratos.csv generado (vacío debido a error).")
 
 if __name__ == "__main__":
     analizar_opciones()
