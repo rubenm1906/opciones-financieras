@@ -8,7 +8,7 @@ import time
 
 # Configuración para Discord
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "https://discord.com/api/webhooks/1350463523196768356/ePmWnO2XWnfD582oMAr2WzqSFs7ZxU1ApRYi1bz8PiSbZE5zAcR7ZoOD8SPVofxA9UUW")
-print(f"Valor de DISCORD_WEBHOOK_URL: {DISCORD_WEBHOOK_URL}")  # Depuración
+print(f"[DEBUG] Valor inicial de DISCORD_WEBHOOK_URL: {DISCORD_WEBHOOK_URL}")  # Depuración inicial
 
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
@@ -35,6 +35,7 @@ FINNHUB_API_KEY = "cvbfudhr01qob7udcs1gcvbfudhr01qob7udcs20"
 
 def obtener_configuracion():
     """Obtiene la configuración desde variables de entorno con valores por defecto del script."""
+    print(f"[DEBUG] Obteniendo configuración - DISCORD_WEBHOOK_URL: {os.getenv('DISCORD_WEBHOOK_URL')}")  # Depuración
     # TICKERS
     TICKERS = os.getenv("TICKERS", DEFAULT_CONFIG["TICKERS"])
     print(f"Valor de TICKERS desde os.getenv: {TICKERS}")
@@ -253,7 +254,7 @@ def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identi
     mensaje = f"Se encontraron contratos que cumplen los filtros de alerta para los siguientes tickers: {ticker_list}"
 
     # Verificar si la URL de Discord es válida
-    print(f"Intentando enviar notificación con URL: {DISCORD_WEBHOOK_URL}")  # Depuración
+    print(f"[DEBUG] Intentando enviar notificación con URL: {DISCORD_WEBHOOK_URL}")  # Depuración
     if not DISCORD_WEBHOOK_URL or not DISCORD_WEBHOOK_URL.startswith(('http://', 'https://')):
         print(f"Error: URL de Discord inválida o no configurada: {DISCORD_WEBHOOK_URL}. Notificación no enviada.")
         return
@@ -297,7 +298,7 @@ def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identi
 def analizar_opciones():
     global SCRIPT_EJECUTADO
 
-    print(f"Iniciando ejecución del script a las {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC")
+    print(f"[DEBUG] Iniciando ejecución del script a las {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC")
 
     if SCRIPT_EJECUTADO:
         print("El script ya ha sido ejecutado. Evitando repetición.")
@@ -341,7 +342,7 @@ def analizar_opciones():
     todas_las_opciones_df = []
 
     try:
-        print(f"Analizando {len(TICKERS)} tickers: {TICKERS}")
+        print(f"[DEBUG] Analizando {len(TICKERS)} tickers: {TICKERS}")
         for ticker in TICKERS:
             resultado += f"\n{'='*50}\nAnalizando ticker: {ticker}\n{'='*50}\n"
             print(f"\n{'='*50}\nAnalizando ticker: {ticker}\n{'='*50}\n")
