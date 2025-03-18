@@ -8,10 +8,11 @@ import time
 
 # Configuración para Discord
 DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL", "https://discord.com/api/webhooks/1350463523196768356/ePmWnO2XWnfD582oMAr2WzqSFs7ZxU1ApRYi1bz8PiSbZE5zAcR7ZoOD8SPVofxA9UUW")
+print(f"Valor de DISCORD_WEBHOOK_URL: {DISCORD_WEBHOOK_URL}")  # Depuración
 
 # Variable para evitar ejecuciones múltiples
 SCRIPT_EJECUTADO = False
-ENVIAR_NOTIFICACION_MANUAL = True  # Cambia a True para forzar la notificación manualmente
+ENVIAR_NOTIFICACION_MANUAL = False  # Cambia a True para forzar la notificación manualmente
 
 # Configuraciones por defecto (ajustables manualmente)
 DEFAULT_CONFIG = {
@@ -252,6 +253,7 @@ def enviar_notificacion_discord(tipo_opcion_texto, top_contratos, tickers_identi
     mensaje = f"Se encontraron contratos que cumplen los filtros de alerta para los siguientes tickers: {ticker_list}"
 
     # Verificar si la URL de Discord es válida
+    print(f"Intentando enviar notificación con URL: {DISCORD_WEBHOOK_URL}")  # Depuración
     if not DISCORD_WEBHOOK_URL or not DISCORD_WEBHOOK_URL.startswith(('http://', 'https://')):
         print(f"Error: URL de Discord inválida o no configurada: {DISCORD_WEBHOOK_URL}. Notificación no enviada.")
         return
