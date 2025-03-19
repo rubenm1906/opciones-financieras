@@ -16,7 +16,7 @@ ENVIAR_NOTIFICACION_MANUAL = False  # Cambia a True/false para forzar la notific
 
 # Configuraciones por defecto (ajustables manualmente)
 DEFAULT_CONFIG = {
-    "TICKERS": "NA9.DE,TEP.PA,GOOGL,EPAM,NFE,GLNG,GLOB,NVDA",
+    "TICKERS": "WBD,UNFI,GOOGL,EPAM,NFE,GLNG,GLOB,NVDA",
     "MIN_RENTABILIDAD_ANUAL": 45.0,
     "MAX_DIAS_VENCIMIENTO": 45,
     "MIN_DIFERENCIA_PORCENTUAL": 5.0,
