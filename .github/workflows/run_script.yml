@@ -8,7 +8,7 @@ on:
       TICKERS:
         description: 'Lista de tickers a analizar (separados por comas)'
         required: false
-        default: 'NA9.DE,TEP.PA,GOOGL,EPAM,NFE,GLNG,GLOB,NVDA'
+        default: 'WBD,UNFI,GOOGL,EPAM,NFE,GLNG,GLOB,NVDA'
       MIN_RENTABILIDAD_ANUAL:
         description: 'Mínima rentabilidad anual (%)'
         required: false
