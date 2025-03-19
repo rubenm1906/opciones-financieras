@@ -2,7 +2,7 @@ name: Analizar Opciones
 
 on:
   schedule:
-    - cron: '0 13 * * *'  # Ejecuta diariamente a las 13:00 UTC
+    - cron: '0 15,16,18,20 * * *'  # Ejecuta diariamente a las 15:00, 16:00, 18:00 y 20:00 UTC
   workflow_dispatch:
     inputs:
       TICKERS:
@@ -21,7 +21,7 @@ on:
         description: 'Mínima diferencia porcentual (%)'
         required: false
         default: '5.0'
-      MIN_VOLATILIDAD_IMPLICITA:  # Corregido para que coincida con el script
+      MIN_VOLATILIDAD_IMPLICITA:
         description: 'Mínima volatilidad implícita (%)'
         required: false
         default: '35.0'
