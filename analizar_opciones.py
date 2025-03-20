@@ -579,68 +579,65 @@ def analizar_opciones():
                         opcion['source']
                     ])
 
-        # Generar Mejores_Contratos.txt y mejores_contratos.csv
-        headers_mejores = [
-            "Ticker",
-            "Strike",
-            "Last Closed",
-            "Bid",
-            "Vencimiento",
-            "Días Venc.",
-            "Rent. Diaria",
-            "Rent. Anual",
-            "Break-even",
-            "Dif. % (Suby.-Break.)",
-            "Volatilidad Implícita",
-            "Volumen",
-            "Interés Abierto",
-            "Fuente"
-        ]
-        if mejores_contratos_por_ticker:
-            # Extraer tickers únicos de los contratos seleccionados
-            tickers_identificados = sorted(list(set([opcion['ticker'] for opcion in mejores_contratos_por_ticker])))
-            ticker_list = ", ".join(tickers_identificados)
-            print(f"Tickers identificados como oportunidades: {ticker_list}")
+# Generar Mejores_Contratos.txt y mejores_contratos.csv
+headers_mejores = [
+    "Ticker",
+    "Strike",
+    "Last Closed",
+    "Bid",
+    "Vencimiento",
+    "Días Venc.",
+    "Rent. Diaria",
+    "Rent. Anual",
+    "Break-even",
+    "Dif. % (Suby.-Break.)",
+    "Volatilidad Implícita",
+    "Volumen",
+    "Interés Abierto",
+    "Fuente"
+]
+if mejores_contratos_por_ticker:
+    # Extraer tickers únicos de los contratos seleccionados
+    tickers_identificados = sorted(list(set([opcion['ticker'] for opcion in mejores_contratos_por_ticker])))
+    ticker_list = ", ".join(tickers_identificados)
+    print(f"Tickers identificados como oportunidades: {ticker_list}")
 
-            tipo_opcion_texto = "Out of the Money" if FILTRO_TIPO_OPCION == "OTM" else "In the Money" if FILTRO_TIPO_OPCION == "ITM" else "Todas"
-            contenido_mejores = f"Mejores Contratos por Ticker (Mayor Rentabilidad Anual, Menor Tiempo, Mayor Diferencia %):\n{'='*50}\n"
+    tipo_opcion_texto = "Out of the Money" if FILTRO_TIPO_OPCION == "OTM" else "In the Money" if FILTRO_TIPO_OPCION == "ITM" else "Todas"
+    contenido_mejores = f"Mejores Contratos por Ticker (Mayor Rentabilidad Anual, Menor Tiempo, Mayor Diferencia %):\n{'='*50}\n"
 
-            # Agrupar contratos por ticker para una mejor presentación
-            contratos_por_ticker = {}
-            for opcion in mejores_contratos_por_ticker:
-                ticker = opcion['ticker']
-                if ticker not in contratos_por_ticker:
-                    contratos_por_ticker[ticker] = []
-                contratos_por_ticker[ticker].append(opcion)
+    # Agrupar contratos por ticker para una mejor presentación
+    contratos_por_ticker = {}
+    for opcion in mejores_contratos_por_ticker:
+        ticker = opcion['ticker']
+        if ticker not in contratos_por_ticker:
+            contratos_por_ticker[ticker] = []
+        contratos_por_ticker[ticker].append(opcion)
 
-            # Generar tabla por ticker
-            for ticker, contratos in contratos_por_ticker.items():
-                contenido_mejores += f"\nTicker: {ticker}\n{'-'*30}\n"
-                tabla_mejores = []
-                for opcion in contratos:
-                    tabla_mejores.append([
-                        opcion['ticker'],
-                        f"${opcion['strike']:.2f}",
-                        f"${opcion['lastPrice']:.2f}",
-                        f"${opcion['bid']:.2f}",
-                        opcion['vencimiento'],
-                        opcion['dias_vencimiento'],
-                        f"{opcion['rentabilidad_diaria']:.2f}%",
-                        f"{opcion['rentabilidad_anual']:.2f}%",
-                        f"${opcion['break_even']:.2f}",
-                        f"{opcion['diferencia_porcentual']:.2f}%",
-                        f"{opcion['volatilidad_implícita']:.2f}%",
-                        opcion['volumen'],
-                        opcion['open_interest'],
-                        opcion['source']
-                    ])
-                tabla = tabulate(tabla_mejores, headers=headers_mejores, tablefmt="grid")
-                contenido_mejores += f"{tabla}\n"
+    # Generar lista por ticker (formato simple)
+    for ticker, contratos in contratos_por_ticker.items():
+        contenido_mejores += f"\nTicker: {ticker}\n{'-'*30}\n"
+        for i, opcion in enumerate(contratos, 1):
+            contenido_mejores += f"Contrato {i}:\n"
+            contenido_mejores += f"  Ticker: {opcion['ticker']}\n"
+            contenido_mejores += f"  Strike: ${opcion['strike']:.2f}\n"
+            contenido_mejores += f"  Last Closed: ${opcion['lastPrice']:.2f}\n"
+            contenido_mejores += f"  Bid: ${opcion['bid']:.2f}\n"
+            contenido_mejores += f"  Vencimiento: {opcion['vencimiento']}\n"
+            contenido_mejores += f"  Días Venc.: {opcion['dias_vencimiento']}\n"
+            contenido_mejores += f"  Rent. Diaria: {opcion['rentabilidad_diaria']:.2f}%\n"
+            contenido_mejores += f"  Rent. Anual: {opcion['rentabilidad_anual']:.2f}%\n"
+            contenido_mejores += f"  Break-even: ${opcion['break_even']:.2f}\n"
+            contenido_mejores += f"  Dif. % (Suby.-Break.): {opcion['diferencia_porcentual']:.2f}%\n"
+            contenido_mejores += f"  Volatilidad Implícita: {opcion['volatilidad_implícita']:.2f}%\n"
+            contenido_mejores += f"  Volumen: {opcion['volumen']}\n"
+            contenido_mejores += f"  Interés Abierto: {opcion['open_interest']}\n"
+            contenido_mejores += f"  Fuente: {opcion['source']}\n"
+            contenido_mejores += "\n"
 
-            # Guardar en Mejores_Contratos.txt
-            with open("Mejores_Contratos.txt", "w") as f:
-                f.write(contenido_mejores)
-            print("Mejores contratos por ticker exportados a 'Mejores_Contratos.txt'.")
+    # Guardar en Mejores_Contratos.txt
+    with open("Mejores_Contratos.txt", "w") as f:
+        f.write(contenido_mejores)
+    print("Mejores contratos por ticker exportados a 'Mejores_Contratos.txt'.")
 
             # Guardar en mejores_contratos.csv
             df_mejores = pd.DataFrame(mejores_contratos_df, columns=headers_mejores)
